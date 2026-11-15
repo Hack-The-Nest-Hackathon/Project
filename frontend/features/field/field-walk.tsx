@@ -469,6 +469,9 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
                 <button type="button" className="conversation-link" onClick={() => { setSpeaker(null); setDialogue(null); }}>Leave</button>
               </div>
               <p className="conversation-context">{dialogue.context}</p>
+              {dialogue.emotionalContext && <section className="translation-context" aria-label="Emotional context">
+                <div><span className="field-label">Emotional context · {dialogue.emotionalContext.tone}</span><p>{dialogue.emotionalContext.reading}</p></div>
+              </section>}
               <SignalPerformance signal={dialogue.signal} onComplete={() => onListen(dialogue)} />
               <button type="button" className="game-button primary" disabled={!observed.includes(dialogue.id)}
                 onClick={() => {

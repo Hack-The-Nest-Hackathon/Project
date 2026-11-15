@@ -233,6 +233,10 @@ export default function ObservationBeat({
           }
         }}>
         {turn === "listen" && <p className="conversation-context">{clue.context}</p>}
+        {turn === "listen" && (clue.translation || clue.emotionalContext) && <section className="translation-context" aria-label="Translation and emotional context">
+          {clue.translation && <div><span className="field-label">Direct translation</span><strong lang="en">{clue.translation}</strong></div>}
+          {clue.emotionalContext && <div><span className="field-label">Emotional context · {clue.emotionalContext.tone}</span><p>{clue.emotionalContext.reading}</p></div>}
+        </section>}
         {building && reply ? (
           <>
             <p className="reply-target"><span className="field-label">Say it in {languageName}</span><strong>{reply.translation}</strong></p>

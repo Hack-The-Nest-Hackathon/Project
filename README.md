@@ -17,18 +17,21 @@ The game includes two starter worlds, 25 generated worlds, and Echo Basin. Echo 
 
 You’ll need Node.js 22.13 or newer, npm, PostgreSQL, and an SSOJet application. Install dependencies from the repository root.
 
+On Windows, make sure the Node.js install directory (usually `C:\Program Files\nodejs`) is on `PATH`, then open a new terminal and check `node -v` and `npm -v`. A Node executable can be available without npm being discoverable; in that case `npm` commands and workspace scripts will fail until the directory containing `npm.cmd` is added to `PATH`.
+
 ```sh
 npm ci
 ```
 
 Copy [backend/.env.example](backend/.env.example) to `backend/.env`. Configure PostgreSQL and SSOJet by following the [backend guide](backend/README.md#configuration). ElevenLabs credentials enable voice playback and microphone practice.
 
-Run these commands in separate terminals from the repository root.
+From the repository root, start both the backend and frontend together:
 
 ```sh
-npm run dev -w backend
-npm run dev -w frontend
+npm run dev
 ```
+
+You can also start either workspace separately with `npm run dev -w backend` or `npm run dev -w frontend`.
 
 Open [localhost:3000](http://localhost:3000). To run the backend in a container, follow the [Docker instructions](backend/README.md#run-with-docker).
 

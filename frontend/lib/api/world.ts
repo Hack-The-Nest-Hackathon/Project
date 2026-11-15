@@ -7,7 +7,7 @@ export type Signal =
 
 export type Clue = {
   id: string; speaker: string; context: string; phrase: string; pronunciation?: string;
-  translation?: string; glosses?: string[];
+  translation?: string; emotionalContext?: { tone: string; reading: string }; glosses?: string[];
   opening?: { npc: string; player: string; question: string; bridge: string; speak?: string };
   roles?: string[];
   signal?: Signal;

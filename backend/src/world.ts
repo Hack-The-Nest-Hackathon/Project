@@ -4,6 +4,7 @@ import { echoBasin } from "./echo-basin.js";
 import { createMission } from "./missions.js";
 import { marketScene, outpostScene } from "./starter-missions.js";
 import { speechLanguage } from "./language/lexicon.js";
+import { analyzeEmotionalContext } from "./emotional-context.js";
 
 export type Signal =
   | { kind: "sound"; beats: ("click" | "chime")[] }
@@ -12,7 +13,7 @@ export type Signal =
 
 export type Reply = { choice: string; roles: string[]; phrase: string; pronunciation?: string; translation: string; glosses?: string[]; prompt: string; acknowledgment: string };
 type FollowUp = { phrase: string; translation: string; prompt: string; alternatives: string[]; pronunciation?: string; glosses?: string[]; roles?: string[] };
-export type Clue = { id: string; speaker: string; context: string; phrase: string; pronunciation?: string; translation?: string; glosses?: string[]; roles?: string[]; replies?: Reply[]; followUp?: FollowUp; observation?: Observation; signal?: Signal };
+export type Clue = { id: string; speaker: string; context: string; phrase: string; pronunciation?: string; translation?: string; emotionalContext?: { tone: string; reading: string }; glosses?: string[]; roles?: string[]; replies?: Reply[]; followUp?: FollowUp; observation?: Observation; signal?: Signal };
 export type Question = {
   prompt: string; options: string[]; answer: number; phrase?: string; pronunciation?: string;
   glosses?: string[]; signal?: Signal;
@@ -130,6 +131,7 @@ export const world = scenes.map((catalogScene, index) => {
     ])).digest("hex").slice(0, 16),
     clues: clues.map(({ replies, followUp, ...clue }, clueIndex) => ({
       ...clue,
+      emotionalContext: analyzeEmotionalContext(clue),
       opening: clue.signal ? undefined : openingFor(catalogScene, catalogScene.clues[clueIndex]),
       replies: replies?.map((reply, index) => ({
         ...reply,

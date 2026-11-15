@@ -1669,6 +1669,11 @@ body:has(.field-game) { overflow: hidden; }
 .minimal-conversation-pane .spoken-phrase { line-height: 1.5; }
 .minimal-conversation-pane .word-tokens { margin-inline-start: -.2rem; }
 .conversation-context { color: var(--muted); font-size: .86rem; line-height: 1.5; }
+.translation-context { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: .55rem; }
+.translation-context > div { display: grid; align-content: start; gap: .2rem; padding: .55rem .65rem; border: 1px solid var(--edge); border-radius: .55rem; background: #17212d; }
+.translation-context .field-label { margin: 0; color: var(--mint); }
+.translation-context strong { color: var(--gold); font-weight: 700; }
+.translation-context p { margin: 0; color: var(--muted); font-size: .84rem; line-height: 1.45; }
 .conversation-cast { display: flex; align-items: end; gap: .55rem; }
 .cast-member {
   display: grid;
