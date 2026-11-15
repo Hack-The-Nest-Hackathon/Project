@@ -12,9 +12,10 @@ import FieldWalk from "./field-walk";
 import RocketDeparture from "./rocket-departure";
 import { recordPhrase } from "./record-phrase";
 
-export default function FieldScene({ scene, character, progress, saveStatus, reducedMotion, save, openMap, musicControl, duckMusic }: {
+export default function FieldScene({ scene, character, progress, saveStatus, reducedMotion, save, openMap, musicControl, duckMusic, bodyLanguageOpen, openBodyLanguage }: {
   scene: Scene; character: Character; progress: Progress; saveStatus: string; reducedMotion: boolean | null;
   save: (progress: Progress) => void; openMap: () => void; musicControl: ReactNode; duckMusic: (quiet: boolean) => void;
+  bodyLanguageOpen: boolean; openBodyLanguage: () => void;
 }) {
   const journal = useRef<HTMLDialogElement>(null);
   const quiz = useRef<HTMLDialogElement>(null);
@@ -72,9 +73,9 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
   }, []);
 
   useEffect(() => {
-    duckMusic(Boolean(playingClue || busy));
+    duckMusic(Boolean(playingClue || busy || bodyLanguageOpen));
     return () => duckMusic(false);
-  }, [playingClue, busy, duckMusic]);
+  }, [playingClue, busy, bodyLanguageOpen, duckMusic]);
 
   useEffect(() => {
     if (!landing) locationHeading.current?.focus({ preventScroll: true });
@@ -224,7 +225,7 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
 
   useEffect(() => {
     function toggleJournal(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== "j" || landing || departing || quiz.current?.open || event.repeat || event.ctrlKey || event.metaKey || event.altKey
+      if (event.key.toLowerCase() !== "j" || landing || departing || bodyLanguageOpen || quiz.current?.open || event.repeat || event.ctrlKey || event.metaKey || event.altKey
         || (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, [contenteditable]"))) return;
       const panel = journal.current;
       if (!panel) return;
@@ -233,7 +234,7 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
     }
     window.addEventListener("keydown", toggleJournal);
     return () => window.removeEventListener("keydown", toggleJournal);
-  }, [departing, landing]);
+  }, [departing, landing, bodyLanguageOpen]);
 
   function replay(clue: Clue) {
     if (playingClue === clue.id) stopAudio();
@@ -249,13 +250,16 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
           <p className="field-label">{scene.language}{scene.dialect ? ` · ${scene.dialect}` : ""}</p>
         </div>
         <div className="field-hud-actions">
+          <button className="game-button" disabled={busy} onClick={() => { stopAudio(); openBodyLanguage(); }}>
+            <PixelIcon name="gesture" /> Body language
+          </button>
           <button className="game-button" aria-haspopup="dialog" aria-controls="field-journal" onClick={openJournal}>
             <PixelIcon name="journal" /> Journal <span className="field-label">{observed.length}/{scene.clues.length}</span>
           </button>
           {musicControl}
         </div>
       </header>
-      <FieldWalk key={scene.id} scene={scene} character={character} observed={progress.observed} busy={busy} paused={journalOpen || quizOpen || departing}
+      <FieldWalk key={scene.id} scene={scene} character={character} observed={progress.observed} busy={busy} paused={journalOpen || quizOpen || departing || bodyLanguageOpen}
         playingClue={playingClue} reducedMotion={reducedMotion} onListen={listen} onStopAudio={stopAudio}
         onSpeakReply={speakReply} newWordsByClue={newWordsByClue}
         landing={landing} onLand={() => setLanding(false)} shipReady={shipReady} onBoard={boardShip} />

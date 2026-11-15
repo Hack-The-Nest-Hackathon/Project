@@ -1,5 +1,94 @@
 @import "tailwindcss";
 
+/* Contextual body-language activities */
+.title-signals { margin-top: .65rem; gap: .55rem; }
+.signal-dialog {
+  width: min(72rem, calc(100vw - 2rem)); max-width: none;
+  max-height: calc(100dvh - 2rem); margin: auto; padding: 0;
+  border: 1px solid #81709c; border-radius: 1.2rem; background: #18152a; color: #f5eddd;
+  box-shadow: 0 1.5rem 5rem #080611b3; overflow-y: auto; overscroll-behavior: contain;
+}
+.signal-dialog::backdrop { background: #090714de; backdrop-filter: blur(5px); }
+.signal-header { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 1rem 1.3rem; border-bottom: 1px solid #665778; background: #211b35f5; }
+.signal-header h2 { margin-top: .2rem; font: 700 clamp(1.2rem, 3vw, 1.7rem) var(--display); color: var(--mint); }
+.signal-header .game-button { flex: none; }
+.signal-intro { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; padding: 1.2rem 1.3rem; }
+.signal-intro > p { max-width: 47rem; line-height: 1.65; color: #d1c9dd; }
+.signal-progress { display: inline-flex; border: 1px solid #96f0d04f; padding: .5rem .7rem; border-radius: 999px; background: #96f0d00a; color: var(--mint); font-size: .8rem; }
+.signal-layout { display: grid; grid-template-columns: 16rem minmax(0, 1fr); gap: 1.2rem; padding: 0 1.3rem 1.3rem; align-items: start; }
+.signal-lessons { display: grid; gap: .5rem; position: sticky; top: 6rem; }
+.signal-lesson { display: flex; gap: .65rem; align-items: center; width: 100%; min-height: 5rem; padding: .75rem .65rem; text-align: left;
+  border: 1px solid #57496f; border-radius: .7rem; background: #211c35; }
+.signal-lesson.is-selected { border-color: var(--mint); background: #273a3d; }
+.signal-lesson-number { font-family: var(--display); font-size: .75rem; color: var(--gold); }
+.signal-lesson > span:nth-child(2) { flex: 1; }
+.signal-lesson strong { display: block; font-size: .85rem; line-height: 1.5; }
+.signal-lesson small { display: block; margin-top: .3rem; color: #b5a7c5; font-size: .73rem; }
+.signal-lesson > .pixel-icon { color: var(--mint); flex: none; }
+.signal-content { min-width: 0; padding: 1.15rem; border: 1px solid #5c5074; border-radius: .95rem; background: #221d35; }
+.signal-situation { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 1.2rem; align-items: center; }
+.signal-demonstration { display: grid; justify-items: center; gap: .2rem; text-align: center; padding: .65rem; border-radius: .8rem; background: #171527; }
+.signal-illustration { display: block; width: 7.5rem; max-width: 100%; height: auto; }
+.signal-situation h3 { margin-block: .45rem .65rem; font-size: 1.15rem; font-weight: 700; color: var(--gold); }
+.signal-situation p:last-child { line-height: 1.65; }
+.signal-question { margin-top: 1.3rem; padding-top: 1.15rem; border-top: 1px solid #5c5074; }
+.signal-question h3, .signal-practice h3 { font-weight: 700; color: var(--mint); }
+.signal-options { display: grid; gap: .55rem; margin-top: .8rem; }
+.signal-options .game-button { justify-content: flex-start; text-align: left; min-height: 3.2rem; gap: .8rem; }
+.signal-options .game-button > span { font: .75rem var(--display); color: var(--gold); }
+.signal-options .is-selected { border-color: var(--gold); }
+.signal-options .is-correct { border-color: var(--mint); background: #26413e; }
+.signal-feedback { margin-top: .9rem; padding: .8rem; border: 1px solid #a57b67; border-radius: .6rem; background: #3a2936; }
+.signal-feedback.is-correct { border-color: #96f0d075; background: #253a39; }
+.signal-feedback strong { color: var(--gold); font-size: .9rem; }
+.signal-feedback.is-correct strong { color: var(--mint); }
+.signal-feedback p { margin-top: .35rem; font-size: .9rem; line-height: 1.65; }
+.signal-response { display: flex; gap: .6rem; margin-block: 1rem; color: var(--gold); font-size: .9rem; }
+.signal-response .pixel-icon { flex: none; margin-top: .1rem; }
+.signal-practice { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #5c5074; }
+.signal-section-heading { display: flex; justify-content: space-between; gap: .7rem; align-items: center; flex-wrap: wrap; margin-bottom: .65rem; }
+.signal-check { display: inline-flex; gap: .35rem; align-items: center; color: var(--mint); font-size: .75rem; }
+.signal-practice > p { line-height: 1.6; margin-top: .4rem; }
+.signal-camera { position: relative; width: min(100%, 26rem); aspect-ratio: 4 / 3; margin: 1rem auto 0; overflow: hidden;
+  border: 1px solid #6f5e88; border-radius: .8rem; background: #110f1e; }
+.signal-camera video, .signal-camera canvas { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
+.signal-camera-placeholder { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: .65rem;
+  background: radial-gradient(ellipse at center, #35434444, #110f1e); color: #c0b4d1; font-size: .8rem; }
+.signal-camera-placeholder .signal-illustration { width: 6.5rem; opacity: .8; }
+.signal-hold { width: min(100%, 26rem); height: .35rem; margin: .55rem auto; border-radius: 999px; overflow: hidden; background: #453857; }
+.signal-hold span { display: block; height: 100%; background: var(--mint); transition: width .1s linear; }
+.signal-camera-status { min-height: 2.5rem; text-align: center; color: var(--gold); font-size: .85rem; }
+.signal-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: .6rem; margin-top: .65rem; }
+.signal-privacy { font-size: .76rem; color: #b5a7c5; }
+.signal-no-camera { margin-top: .85rem; padding: .75rem; border: 1px dashed #6f5e88; border-radius: .6rem; font-size: .85rem; }
+.signal-no-camera summary { color: var(--mint); cursor: pointer; }
+.signal-no-camera p { margin-top: .6rem; line-height: 1.6; }
+.signal-next { justify-content: flex-end; padding-top: .5rem; }
+.signal-footer { padding: .95rem 1.3rem; border-top: 1px solid #5c5074; background: #1b172b; color: #b5a7c5; font-size: .76rem; line-height: 1.65; }
+.signal-footer p + p { margin-top: .4rem; color: var(--gold); }
+@media (prefers-reduced-motion: no-preference) {
+  .signal-greeting { transform-origin: 50% 90%; animation: signal-hello 2.6s ease-in-out infinite; }
+}
+@keyframes signal-hello { 0%, 60%, 100% { rotate: 0deg; } 15% { rotate: -9deg; } 30% { rotate: 9deg; } 45% { rotate: -6deg; } }
+@media (max-width: 48rem) {
+  .signal-dialog { width: calc(100vw - 1rem); max-height: calc(100dvh - 1rem); border-radius: .8rem; }
+  .signal-header { padding: .8rem; gap: .55rem; }
+  .signal-header .game-button { font-size: .75rem; padding-inline: .5rem; }
+  .signal-intro { padding: .9rem; gap: .7rem; }
+  .signal-intro > p { font-size: .9rem; }
+  .signal-layout { grid-template-columns: minmax(0, 1fr); gap: .9rem; padding: 0 .75rem .9rem; }
+  .signal-lessons { position: static; display: flex; overflow-x: auto; gap: .5rem; padding-bottom: .3rem; }
+  .signal-lesson { min-width: 12rem; width: 12rem; flex: none; }
+  .signal-content { padding: .9rem; }
+  .signal-situation { grid-template-columns: 6rem minmax(0, 1fr); gap: .75rem; }
+  .signal-situation h3 { font-size: 1rem; }
+  .signal-situation p:last-child { font-size: .9rem; }
+  .signal-demonstration { padding: .4rem; }
+  .signal-demonstration .field-label { font-size: .62rem; }
+}
+@media (max-height: 30rem) { .signal-dialog { max-height: calc(100dvh - .75rem); } .signal-header { position: static; } .signal-lessons { position: static; } }
+
 :root {
   color-scheme: dark;
   --space: #100e21;

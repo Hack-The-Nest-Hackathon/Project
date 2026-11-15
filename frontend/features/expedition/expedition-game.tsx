@@ -14,9 +14,11 @@ import { useSaveSlot } from "../saves/use-save-slot";
 import TitleMenu from "../title/title-menu";
 import InstallPrompt from "../title/install-prompt";
 import { useGameMusic } from "./use-game-music";
+import BodyLanguageDialog from "../body-language/body-language-dialog";
 
 export default function ExpeditionGame() {
   const [screen, setScreen] = useState<"title" | "slots" | "profile" | "map" | "field">("title");
+  const [bodyLanguageOpen, setBodyLanguageOpen] = useState(false);
   const reducedMotion = useReducedMotion();
   const screenMotion = {
     initial: "hidden",
@@ -92,7 +94,7 @@ export default function ExpeditionGame() {
         {screen === "title" && (
           <motion.section key="title" {...screenMotion} onAnimationComplete={focusScreen} className="title-scene" aria-labelledby="game-title">
             <TitleMenu progress={progress} slotLoading={slotLoading} reducedMotion={reducedMotion}
-              openMap={openMap} openSlots={() => setScreen("slots")} />
+              openMap={openMap} openSlots={() => setScreen("slots")} openBodyLanguage={() => setBodyLanguageOpen(true)} />
           </motion.section>
         )}
         {screen === "slots" && (
@@ -116,17 +118,20 @@ export default function ExpeditionGame() {
         {screen === "map" && progress.character && (
           <motion.section key="map" {...screenMotion} onAnimationComplete={focusScreen} className="terminal map-screen">
             <MapMenu world={world} phase={phase} progress={progress} reducedMotion={reducedMotion}
-              travel={travel} retry={retryWorld} openSlots={() => setScreen("slots")} />
+              travel={travel} retry={retryWorld} openSlots={() => setScreen("slots")} openBodyLanguage={() => setBodyLanguageOpen(true)} />
           </motion.section>
         )}
         {screen === "field" && progress.character && scene && !slotLoading && (
           <motion.div key={scene.id} {...screenMotion} className="field-game" onAnimationComplete={focusScreen}>
             <FieldScene scene={scene} character={progress.character} progress={progress} saveStatus={saveStatus}
-              reducedMotion={reducedMotion} save={save} openMap={openMap} musicControl={musicControl} duckMusic={music.duck} />
+              reducedMotion={reducedMotion} save={save} openMap={openMap} musicControl={musicControl} duckMusic={music.duck}
+              bodyLanguageOpen={bodyLanguageOpen} openBodyLanguage={() => setBodyLanguageOpen(true)} />
           </motion.div>
         )}
       </AnimatePresence>
       <InstallPrompt visible={screen === "title"} reducedMotion={reducedMotion} />
+      <BodyLanguageDialog open={bodyLanguageOpen} onClose={() => setBodyLanguageOpen(false)}
+        progress={progress} save={save} saveStatus={saveStatus} />
     </main>
   );
 }

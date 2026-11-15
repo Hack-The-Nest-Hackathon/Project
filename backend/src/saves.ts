@@ -4,7 +4,19 @@ export type Character = {
   name: string; skin: number; hair: number; hairColor: number; suit: number; accessory: number;
 };
 
-export type Progress = { planet: string; observed: string[]; badges: string[]; character?: Character };
+export type Progress = {
+  planet: string; observed: string[]; badges: string[]; character?: Character;
+  bodyLanguage?: { learned: string[]; practiced: string[] };
+};
+
+const signalList = {
+  type: "array", uniqueItems: true, maxItems: 5,
+  items: { type: "string", enum: ["welcome", "wait", "ready", "attention", "two"] },
+};
+export const bodyLanguageSchema = {
+  type: "object", additionalProperties: false, required: ["learned", "practiced"],
+  properties: { learned: signalList, practiced: signalList },
+};
 
 const appearanceIndex = { type: "integer", minimum: 0, maximum: 5 };
 export const characterSchema = {

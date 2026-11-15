@@ -1,4 +1,4 @@
-const cacheName = "field-notes-v15";
+const cacheName = "field-notes-v16";
 const sceneAssets = new Set([
   "/orbit.png", "/market.png", "/ship.png", "/outpost.png",
   "/cartridge.png", "/guide.png", "/guide-baker.png", "/guide-scout.png",
@@ -21,6 +21,7 @@ self.addEventListener("fetch", (event) => {
 
   const isPage = request.mode === "navigate" && url.pathname === "/";
   const isAsset = url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icon-")
+    || url.pathname.startsWith("/mediapipe/")
     || url.pathname === "/favicon.ico"
     || (url.pathname.startsWith("/worlds/") && url.pathname.endsWith(".png")) || sceneAssets.has(url.pathname);
   const isGameData = url.pathname === "/api/world" || url.pathname.startsWith("/api/audio/");

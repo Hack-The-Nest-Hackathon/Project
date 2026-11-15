@@ -29,6 +29,7 @@ const shapes = {
   check: "M1 7h3l3 3 6-7h3L7 14z",
   retry: "M5 2h6v2h2v2h2v5h-2v2h-2v2H5v-2H3v-2H1V8h2v3h2v2h6v-2h2V6h-2V4H5v3L1 4l4-3z",
   boot: "M5 1h5v7h2v2h3v4H2V9h3zM4 12v1h9v-1z",
+  gesture: "M6 1h2v6h1V0h2v7h1V2h2v7h1V5h1v7h-2v3H6v-2H4v-2H2V8h2v2h2z",
 } as const;
 
 export default function PixelIcon({ name }: { name: keyof typeof shapes }) {

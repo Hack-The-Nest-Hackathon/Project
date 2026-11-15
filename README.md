@@ -2,6 +2,16 @@
 
 Talk to locals, collect language clues in a journal, and use what you learn to open the gate.
 
+## Body language: Beyond words
+
+Choose **Body language** from the title screen, star map, or field HUD. Five short situations explore greeting, asking someone to wait, agreement, turn-taking, and quantity. Players interpret a gesture in context, then optionally practise it with their camera. The same open palm is used in two different scenes to show why context matters. Signals are presented as shared conventions in these scenes, rather than universal meanings.
+
+Camera practice uses Google MediaPipe Gesture Recognizer (`@mediapipe/tasks-vision` 1.2.3). Inference runs in a web worker at a bounded rate; a matching hand shape must remain stable for one second before completion. Camera frames are processed locally, without recording or uploading video, and microphone access is not requested. Camera tracks stop after a successful match, when switching lessons, closing the activity, hiding the tab, or leaving the page. HTTPS or localhost is required. Camera-free interpretation and practice remain available.
+
+The model is bundled at `frontend/public/mediapipe/gesture-recognizer.task`. `predev` and `prebuild` copy the pinned SDK and WebAssembly runtime from the installed package into `public/mediapipe/vendor/`; no CDN or API key is needed at runtime. Use the npm scripts so these preparation steps run. Meaning and camera-practice completions are stored separately in each save slot. Existing saves continue to load.
+
+References: [Google Gesture Recognizer](https://developers.google.com/edge/mediapipe/solutions/vision/gesture_recognizer), [MediaPipe web setup](https://developers.google.com/edge/mediapipe/solutions/setup_web).
+
 ## Run locally
 
 Use Node.js 22.13 or later. Run npm install from the repository root, then run these in separate terminals.

@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { upsertSave } from "../../../../database/index.js";
 import {
   characterSchema,
+  bodyLanguageSchema,
   isValidProgress,
   saveHeaders,
   type Progress,
@@ -37,6 +38,7 @@ export default {
         observed: ids,
         badges: ids,
         character: characterSchema,
+        bodyLanguage: bodyLanguageSchema,
       },
     },
   },

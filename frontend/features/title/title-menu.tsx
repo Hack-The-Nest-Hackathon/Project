@@ -4,8 +4,9 @@ import CharacterSprite from "../../components/character-sprite";
 import PixelIcon from "../../components/pixel-icon";
 import type { Progress } from "../../lib/api/saves";
 
-export default function TitleMenu({ progress, slotLoading, reducedMotion, openMap, openSlots }: {
+export default function TitleMenu({ progress, slotLoading, reducedMotion, openMap, openSlots, openBodyLanguage }: {
   progress: Progress; slotLoading: boolean; reducedMotion: boolean | null; openMap: () => void; openSlots: () => void;
+  openBodyLanguage: () => void;
 }) {
   return (
     <>
@@ -47,6 +48,9 @@ export default function TitleMenu({ progress, slotLoading, reducedMotion, openMa
           <PixelIcon name="launch" />
           {progress.character ? "Continue expedition" : "Begin expedition"}
         </motion.button>
+        <button className="game-button title-signals" disabled={slotLoading} onClick={openBodyLanguage}>
+          <PixelIcon name="gesture" /> Body language <span className="field-label">{progress.bodyLanguage?.learned.length ?? 0}/5</span>
+        </button>
         {progress.character && <button className="game-button title-files" onClick={openSlots}>
           <PixelIcon name="save" /> Save files
         </button>}

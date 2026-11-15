@@ -6,10 +6,11 @@ import type { Scene } from "../../lib/api/world";
 import StarChart from "./star-chart";
 
 export default function MapMenu({
-  world, phase, progress, reducedMotion, travel, retry, openSlots,
+  world, phase, progress, reducedMotion, travel, retry, openSlots, openBodyLanguage,
 }: {
   world: Scene[]; phase: "loading" | "ready" | "error"; progress: Progress; reducedMotion: boolean | null;
   travel: (planet: string) => void; retry: () => void; openSlots: () => void;
+  openBodyLanguage: () => void;
 }) {
   const [destination, setDestination] = useState(progress.planet);
   const target = world.find(({ id }) => id === destination) ?? world[0];
@@ -19,6 +20,7 @@ export default function MapMenu({
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button className="game-button" onClick={openSlots}><PixelIcon name="back" /> Save files</button>
+        <button className="game-button" onClick={openBodyLanguage}><PixelIcon name="gesture" /> Body language</button>
         <span className="field-label">{progress.badges.length} / {world.length} badges</span>
       </div>
       <h1 tabIndex={-1} className="screen-heading">Star map</h1>

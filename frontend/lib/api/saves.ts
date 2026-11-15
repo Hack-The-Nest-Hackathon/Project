@@ -1,14 +1,16 @@
 import { request } from "./client";
 import { isCharacter, type Character } from "../character";
+import { isBodyLanguageProgress, type BodyLanguageProgress } from "../body-language";
 
-export type Progress = { planet: string; observed: string[]; badges: string[]; character?: Character };
+export type Progress = { planet: string; observed: string[]; badges: string[]; character?: Character; bodyLanguage?: BodyLanguageProgress };
 
 export function isProgress(value: unknown): value is Progress {
   if (!value || typeof value !== "object") return false;
-  const { planet, observed, badges, character } = value as Partial<Progress>;
+  const { planet, observed, badges, character, bodyLanguage } = value as Partial<Progress>;
   const isStringArray = (items: unknown) => Array.isArray(items) && items.every((item) => typeof item === "string");
   return typeof planet === "string" && isStringArray(observed) && isStringArray(badges)
-    && (character === undefined || isCharacter(character));
+    && (character === undefined || isCharacter(character))
+    && (bodyLanguage === undefined || isBodyLanguageProgress(bodyLanguage));
 }
 
 export async function loadSaves(key: string, signal: AbortSignal) {

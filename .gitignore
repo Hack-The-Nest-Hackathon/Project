@@ -2,6 +2,7 @@ node_modules/
 .next/
 dist/
 .music-cache/
+frontend/public/mediapipe/vendor/
 *.tsbuildinfo
 .env*
 !.env.example
