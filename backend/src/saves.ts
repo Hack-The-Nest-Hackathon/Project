@@ -5,7 +5,9 @@ export type Character = {
   name: string; skin: number; hair: number; hairColor: number; suit: number; accessory: number;
 };
 
-export type Progress = { planet: string; observed: string[]; badges: string[]; character?: Character; photos?: NasaPhoto[] };
+export type Progress = {
+  planet: string; observed: string[]; badges: string[]; visited?: string[]; character?: Character; photos?: NasaPhoto[];
+};
 
 const appearanceIndex = { type: "integer", minimum: 0, maximum: 5 };
 export const characterSchema = {
@@ -20,11 +22,12 @@ export const characterSchema = {
 
 const planets = new Map(world.map(({ id, requiredBadges }) => [id, requiredBadges]));
 
-export function isValidProgress({ planet, observed, badges, photos = [] }: Progress) {
+export function isValidProgress({ planet, observed, badges, visited = [], photos = [] }: Progress) {
   const requiredBadges = planets.get(planet);
   return requiredBadges !== undefined
     && badges.length >= requiredBadges
     && badges.every((badge) => planets.has(badge))
+    && visited.every((place) => planets.has(place))
     && observed.every((clue) => lines.has(clue))
     && new Set(photos.map((photo) => photo.sceneId)).size === photos.length
     && photos.every((photo) => badges.includes(photo.sceneId) && isNasaImageUrl(photo.imageUrl));

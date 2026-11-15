@@ -1347,6 +1347,39 @@ body:has(.field-game) { overflow: hidden; }
 }
 .nasa-photo-print figcaption { display: grid; gap: .18rem; padding: .4rem .3rem .25rem; font-size: .82rem; overflow-wrap: anywhere; }
 .nasa-photo-print a { color: #28564d; text-decoration: underline; }
+.scrapbook-stickers { margin: .8rem auto 0; max-width: 35rem; }
+.scrapbook-stickers h4 { margin-bottom: .35rem; font-family: var(--display); }
+.scrapbook-stickers ul { display: flex; flex-wrap: wrap; gap: .45rem; padding: 0; list-style: none; }
+.scrapbook-stickers li {
+  display: grid;
+  justify-items: center;
+  gap: .15rem;
+  min-width: 4.3rem;
+  padding: .35rem;
+  border: 1px solid #8a7258;
+  border-radius: .55rem;
+  background: #f3e9d7;
+  font-size: .65rem;
+  text-align: center;
+}
+.scrapbook-sticker-art {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 2px dashed #7b654a;
+  border-radius: 50%;
+  color: #263c61;
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+.scrapbook-sticker-art[data-sticker="nasa-patch"] {
+  border-radius: .5rem;
+  background: #e8f0ff;
+  color: #155bbc;
+  font-size: .75rem;
+}
+.scrapbook-stickers li small { max-width: 7rem; color: #564735; font-size: .6rem; }
 .photo-image-fallback { padding: .8rem; }
 .photo-capture { padding: .65rem; border: 1px solid var(--edge); border-radius: .7rem; }
 .photo-capture h3 { color: var(--gold); font-family: var(--display); }

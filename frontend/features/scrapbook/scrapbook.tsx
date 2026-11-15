@@ -1,12 +1,25 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import PixelIcon from "../../components/pixel-icon";
+import { getAchievements, type StickerAchievement } from "../../lib/api/achievements";
 import { getNasaPhoto, type NasaPhoto } from "../../lib/api/photos";
 import type { Progress } from "../../lib/api/saves";
 import type { Scene } from "../../lib/api/world";
 import PhotoPrint from "./photo-print";
 
-export default function Scrapbook({ progress, world, reducedMotion, onCapture, onClose }: {
+const stickerArt: Record<string, string> = {
+  rocket: "🚀",
+  "red-planet": "🪐",
+  star: "⭐",
+  "nasa-patch": "NASA",
+  meteor: "☄️",
+  moon: "🌙",
+  "shooting-star": "🌠",
+  "blue-planet": "🌎",
+};
+
+export default function Scrapbook({ accountId, progress, world, reducedMotion, onCapture, onClose }: {
+  accountId: string;
   progress: Progress;
   world: Scene[];
   reducedMotion: boolean | null;
@@ -19,14 +32,23 @@ export default function Scrapbook({ progress, world, reducedMotion, onCapture, o
   const [direction, setDirection] = useState(1);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [stickers, setStickers] = useState<StickerAchievement[]>([]);
+  const [stickerError, setStickerError] = useState("");
   const sceneId = progress.badges[page];
   const photo = progress.photos?.find((item) => item.sceneId === sceneId);
   const name = world.find(({ id }) => id === sceneId)?.title ?? "Survey stop";
 
   useEffect(() => {
     dialog.current?.showModal();
-    return () => request.current?.abort();
-  }, []);
+    const controller = new AbortController();
+    getAchievements(accountId, controller.signal).then(setStickers).catch(() => {
+      if (!controller.signal.aborted) setStickerError("Earned stickers couldn't be loaded. Close and reopen your scrapbook to retry.");
+    });
+    return () => {
+      request.current?.abort();
+      controller.abort();
+    };
+  }, [accountId]);
 
   function flip(offset: number) {
     if (loading || page + offset < 0 || page + offset >= progress.badges.length) return;
@@ -83,6 +105,19 @@ export default function Scrapbook({ progress, world, reducedMotion, onCapture, o
                 </button>
                 {error && <p role="status">{error}</p>}
               </>}
+              {photo && <section className="scrapbook-stickers" aria-label="Earned achievement stickers">
+                <h4>Achievement stickers</h4>
+                {stickerError ? <p role="status">{stickerError}</p> : stickers.length
+                  ? <ul>{stickers.map((sticker) => <li key={sticker.id} title={`${sticker.title}: ${sticker.description}`}>
+                    <span className="scrapbook-sticker-art" data-sticker={sticker.stickerId} aria-hidden="true">
+                      {stickerArt[sticker.stickerId] ?? "✦"}
+                    </span>
+                    <span>{sticker.stickerName}</span>
+                    <small>{sticker.title}</small>
+                    <small>{sticker.description}</small>
+                  </li>)}</ul>
+                  : <p>Earn achievements to collect space stickers.</p>}
+              </section>}
             </> : <p>Pass a planet’s translation check to add your first NASA photo.</p>}
           </motion.section>
         </AnimatePresence>

@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { upsertSave } from "../../../../database/index.js";
+import { grantQualifiedAchievements } from "../../../achievement-service.js";
 import {
   characterSchema,
   isValidProgress,
@@ -37,6 +38,7 @@ export default {
         planet: { type: "string", maxLength: 40 },
         observed: ids,
         badges: ids,
+        visited: ids,
         character: characterSchema,
         photos: {
           type: "array", maxItems: 27, items: {
@@ -62,6 +64,7 @@ export default {
     }
     try {
       await upsertSave(request.account.id, Number(request.params.slot), request.body);
+      await grantQualifiedAchievements(request.account.id);
       return reply.code(204).send();
     } catch (error) {
       request.log.warn({ errorName: error instanceof Error ? error.name : "Unknown" }, "Save write failed");

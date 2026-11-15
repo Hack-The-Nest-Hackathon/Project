@@ -30,8 +30,11 @@ const sql = {
   deleteAccountSession: await readFile(new URL("sql/queries/delete-account-session.sql", import.meta.url), "utf8"),
   deleteExpiredSessions: await readFile(new URL("sql/queries/delete-expired-sessions.sql", import.meta.url), "utf8"),
   createGameSaves: await readFile(new URL("sql/schema/create-game-saves.sql", import.meta.url), "utf8"),
+  createPlayerAchievements: await readFile(new URL("sql/schema/create-game-player-achievements.sql", import.meta.url), "utf8"),
   listSaves: await readFile(new URL("sql/queries/list-saves.sql", import.meta.url), "utf8"),
   upsertSave: await readFile(new URL("sql/queries/upsert-save.sql", import.meta.url), "utf8"),
+  insertPlayerAchievements: await readFile(new URL("sql/queries/insert-player-achievements.sql", import.meta.url), "utf8"),
+  listPlayerAchievements: await readFile(new URL("sql/queries/list-player-achievements.sql", import.meta.url), "utf8"),
 };
 
 export async function initializeDatabase() {
@@ -39,6 +42,7 @@ export async function initializeDatabase() {
   await db.query(sql.createSessions);
   await db.query(sql.indexSessionExpiry);
   await db.query(sql.createGameSaves);
+  await db.query(sql.createPlayerAchievements);
   await db.query(sql.createFriendships);
   await db.query(sql.indexFriendshipsHigh);
 }
@@ -50,6 +54,22 @@ export async function listSaves(playerId: string) {
 
 export async function upsertSave(playerId: string, slot: number, progress: Progress) {
   await db.query(sql.upsertSave, [playerId, slot, progress]);
+}
+
+export type PlayerAchievement = { achievement_id: string; sticker_id: string; earned_at: Date };
+
+export async function grantPlayerAchievements(
+  playerId: string, qualified: readonly { id: string; stickerId: string }[],
+) {
+  if (!qualified.length) return;
+  await db.query(sql.insertPlayerAchievements, [
+    playerId, qualified.map(({ id }) => id), qualified.map(({ stickerId }) => stickerId),
+  ]);
+}
+
+export async function listPlayerAchievements(playerId: string) {
+  const result = await db.query<PlayerAchievement>(sql.listPlayerAchievements, [playerId]);
+  return result.rows;
 }
 
 

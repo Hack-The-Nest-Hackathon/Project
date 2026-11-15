@@ -179,7 +179,7 @@ export default function ExpeditionGame() {
         )}
       </AnimatePresence>
       {friendsOpen && <FriendsPanel accountId={account.id} reducedMotion={reducedMotion} close={() => setFriendsOpen(false)} />}
-      {scrapbookOpen && <Scrapbook progress={progress} world={world} reducedMotion={reducedMotion}
+      {scrapbookOpen && <Scrapbook accountId={account.id} progress={progress} world={world} reducedMotion={reducedMotion}
         onCapture={savePhoto} onClose={() => setScrapbookOpen(false)} />}
       {syncFailed && <button className="game-button fixed bottom-4 right-4 z-20" onClick={() => void flushSaves()}>
         Retry save sync

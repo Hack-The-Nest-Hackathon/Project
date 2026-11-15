@@ -2,13 +2,16 @@ import { request } from "./client";
 import { isCharacter, type Character } from "../character";
 import { isNasaPhoto, type NasaPhoto } from "./photos";
 
-export type Progress = { planet: string; observed: string[]; badges: string[]; character?: Character; photos?: NasaPhoto[] };
+export type Progress = {
+  planet: string; observed: string[]; badges: string[]; visited?: string[]; character?: Character; photos?: NasaPhoto[];
+};
 
 export function isProgress(value: unknown): value is Progress {
   if (!value || typeof value !== "object") return false;
-  const { planet, observed, badges, character, photos } = value as Partial<Progress>;
+  const { planet, observed, badges, visited, character, photos } = value as Partial<Progress>;
   const isStringArray = (items: unknown) => Array.isArray(items) && items.every((item) => typeof item === "string");
   return typeof planet === "string" && isStringArray(observed) && isStringArray(badges)
+    && (visited === undefined || isStringArray(visited))
     && (character === undefined || isCharacter(character))
     && (photos === undefined || (Array.isArray(photos) && photos.every(isNasaPhoto)));
 }

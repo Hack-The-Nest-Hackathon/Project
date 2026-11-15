@@ -118,8 +118,12 @@ export function useSaveSlot(accountId: string) {
 
   function save(next: Progress) {
     if (slotLoading) return;
-    setSavedSlots((current) => ({ ...current, [slot]: next }));
-    pending.current.set(slot, next);
+    const progress = {
+      ...next,
+      visited: [...new Set([...(next.visited ?? []), ...next.badges, next.planet])],
+    };
+    setSavedSlots((current) => ({ ...current, [slot]: progress }));
+    pending.current.set(slot, progress);
     setSaveStatus("Syncing progress…");
     void flushSaves();
   }
