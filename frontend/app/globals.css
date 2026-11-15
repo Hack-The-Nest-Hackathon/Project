@@ -1826,21 +1826,67 @@ body:has(.field-game) { overflow: hidden; }
 .signal-engraving { position: relative; display: inline-flex; color: #f6d49c; animation: carve-glyph .52s steps(10) both; }
 .signal-engraving .pixel-icon { width: 1.55rem; height: 1.55rem; }
 @keyframes carve-glyph { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
-.signal-stage { flex-wrap: nowrap; gap: .9rem; min-height: 5.15rem; }
-.signal-mover { position: relative; flex: 0 0 4.65rem; height: 4rem; transition: transform .18s steps(3); }
-.signal-mover i { position: absolute; display: block; }
-.signal-head { left: 1.7rem; top: .12rem; width: 1.2rem; height: 1.1rem; background: #bb8caf; box-shadow: inset 0 -.18rem #795d83; }
-.signal-head::after { content: ""; position: absolute; top: .37rem; left: .23rem; width: .15rem; height: .18rem; background: #272331; box-shadow: .52rem 0 #272331; }
-.signal-torso { top: 1.18rem; left: 1.6rem; width: 1.4rem; height: 1.42rem; background: #7fb6ac; box-shadow: inset 0 -.26rem #537d82; }
-.signal-arm { top: 1.37rem; width: 1.36rem; height: .42rem; background: #7fb6ac; transition: transform .2s steps(3); }
-.signal-arm-left { left: .3rem; transform: rotate(-55deg); transform-origin: right center; }
-.signal-arm-right { right: .35rem; transform: rotate(55deg); transform-origin: left center; }
-.signal-legs { top: 2.5rem; left: 1.61rem; width: .42rem; height: 1.05rem; background: #9389ba; box-shadow: .94rem 0 #9389ba; }
-.signal-mover[data-pose="left"] .signal-arm-left, .signal-mover[data-pose="right"] .signal-arm-right { transform: rotate(0); }
-.signal-mover[data-pose="wait"] { transform: translateY(.58rem) scaleY(.82); }
-.signal-pose-log { display: flex; flex-wrap: wrap; gap: .3rem; font-size: .75rem; }
-.signal-pose-log span { padding: .2rem .3rem; background: #34394d; }
+.signal-stage {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 9rem) minmax(0, 1fr);
+  align-items: center;
+  gap: .75rem;
+  min-height: 6.85rem;
+  background: #212839 url("/orbit.png") center bottom / cover;
+}
+.signal-gesture-view {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 5.8rem;
+  overflow: hidden;
+  border-bottom: 2px solid #8cdbce66;
+}
+.signal-gesture-view .walk-sprite {
+  grid-area: 1 / 1;
+  width: 4.45rem;
+  image-rendering: pixelated;
+  transform-origin: center 78%;
+}
+.signal-ghost { opacity: .25; }
+.signal-mover { position: relative; transition: transform .27s steps(4); }
+.signal-gesture-view[data-pose="left"] .signal-mover { transform: translateX(-.8rem) rotate(-7deg); }
+.signal-gesture-view[data-pose="right"] .signal-mover { transform: translateX(.8rem) rotate(7deg); }
+.signal-gesture-view[data-pose="wait"] .signal-mover { transform: translateY(.5rem) scaleY(.68); }
+.signal-gesture-view[data-pose="left"] .signal-mover::after,
+.signal-gesture-view[data-pose="right"] .signal-mover::after {
+  content: "";
+  position: absolute;
+  top: 53%;
+  width: .95rem;
+  height: .28rem;
+  background: #c98b70;
+  box-shadow: 0 .15rem #784f60;
+}
+.signal-gesture-view[data-pose="left"] .signal-mover::after { right: 61%; }
+.signal-gesture-view[data-pose="right"] .signal-mover::after { left: 61%; }
+.signal-direction {
+  position: absolute;
+  top: .15rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.5rem;
+  height: 1.3rem;
+  color: #ffe5ab;
+}
+.signal-direction .pixel-icon { width: 1.25rem; height: 1.25rem; }
+.signal-gesture-view[data-pose="left"] .signal-direction { left: .32rem; }
+.signal-gesture-view[data-pose="right"] .signal-direction { right: .32rem; }
+.signal-pause { width: .8rem; height: .8rem; border-inline: 3px solid currentColor; }
+.signal-pose-log { display: grid; align-content: center; gap: .35rem; font-size: .75rem; }
+.signal-pose-log span { width: fit-content; padding: .22rem .35rem; background: #303549; border-inline-start: 2px solid #6b7181; }
+.signal-pose-log [data-current="true"] { color: #ffe5ab; border-color: #dcb77f; }
+.walk-npc .walk-sprite[data-gesture] { animation: none; transition: transform .27s steps(4); }
+.walk-npc .walk-sprite[data-gesture="left"] { transform: translateX(-.65rem) rotate(-7deg); }
+.walk-npc .walk-sprite[data-gesture="right"] { transform: translateX(.65rem) rotate(7deg); }
+.walk-npc .walk-sprite[data-gesture="wait"] { transform: translateY(.35rem) scaleY(.7); transform-origin: center 75%; }
+.walk-player.is-gesture-observer { opacity: .36; }
 @media (prefers-reduced-motion: reduce) {
   .signal-engraving { animation: none; }
-  .signal-mover, .signal-arm { transition: none; }
+  .signal-mover, .walk-npc .walk-sprite[data-gesture] { transition: none; }
 }

@@ -168,6 +168,8 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
     try { localStorage.setItem("voices-skip-speaking", "yes"); } catch { /* Keep the preference for this visit. */ }
   }
   const [dialogue, setDialogue] = useState<Clue | null>(null);
+  const [gesturePose, setGesturePose] = useState<"left" | "right" | "wait" | null>(null);
+  const activeGesture = speaker && dialogue?.signal?.kind === "gesture" ? gesturePose : null;
   const held = useRef(new Map<string, Direction>());
   const waypoint = useRef<{ name: string | null; points: Position[] } | null>(null);
   const location = useRef(position);
@@ -220,6 +222,7 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
   }
 
   function observe(clue: Clue) {
+    setGesturePose(null);
     setDialogue(clue);
     if (clue.signal) { onStopAudio(); return; }
     if (clue.opening) onPlayAudio(`${clue.id}-hello`);
@@ -398,7 +401,8 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
               {stop === nextStation && <span className="station-beacon" aria-hidden="true" />}{stop.name}
             </span>
             <span className={clsx("walk-sprite", `npc-${index}`,
-              speaker === stop.name && dialogue && playingClue === dialogue.id && "is-speaking")} aria-hidden="true" />
+              speaker === stop.name && dialogue && playingClue === dialogue.id && "is-speaking")}
+              data-gesture={speaker === stop.name ? activeGesture ?? undefined : undefined} aria-hidden="true" />
           </button>
         ))}
         <button type="button" className={clsx("walk-npc survey-ship", landing && "invisible")}
@@ -407,7 +411,7 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
           <span className={clsx("walk-name", shipReady && "next-station")}>Survey ship</span>
           <span ref={rocketSprite} className="survey-ship-sprite" aria-hidden="true" />
         </button>
-        <span aria-hidden="true" className={clsx("walk-player", landing && "invisible", facingLeft && "faces-left", moving && !reducedMotion && "is-walking")}
+        <span aria-hidden="true" className={clsx("walk-player", activeGesture && "is-gesture-observer", landing && "invisible", facingLeft && "faces-left", moving && !reducedMotion && "is-walking")}
           style={{ left: `${position.x}%`, top: `${position.y}%`, zIndex: Math.round(position.y) }}>
           <span className="player-portrait"><CharacterSprite character={character} /></span>
         </span>
@@ -469,7 +473,7 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
                 <button type="button" className="conversation-link" onClick={() => { setSpeaker(null); setDialogue(null); }}>Leave</button>
               </div>
               <p className="conversation-context">{dialogue.context}</p>
-              <SignalPerformance signal={dialogue.signal} onComplete={() => onListen(dialogue)} />
+              <SignalPerformance signal={dialogue.signal} onGesture={setGesturePose} onComplete={() => onListen(dialogue)} />
               <button type="button" className="game-button primary" disabled={!observed.includes(dialogue.id)}
                 onClick={() => {
                   if (nextObservation) observe(nextObservation);

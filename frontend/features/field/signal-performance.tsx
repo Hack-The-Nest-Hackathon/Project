@@ -1,68 +1,90 @@
 import { useEffect, useRef, useState } from "react";
 import PixelIcon from "../../components/pixel-icon";
 import type { Signal } from "../../lib/api/world";
+import { acousticBeat, acousticLead, createAcousticClip } from "./signal-audio";
+
+type Pose = "left" | "right" | "wait";
 
 const glyphIcons = { bring: "hookGlyph", check: "eye", lantern: "lantern", marker: "marker" } as const;
 const glyphNames = { bring: "hook", check: "eye", lantern: "lantern", marker: "trail marker" } as const;
 const poses = { left: "Points screen-left", right: "Points screen-right", wait: "Crouches" } as const;
 const labels = { sound: "Play signal", gesture: "Watch gesture", glyph: "Watch inscription" } as const;
 
-function scheduleSound(context: AudioContext, beat: "click" | "chime", time: number) {
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  const duration = beat === "click" ? .045 : .46;
-  oscillator.type = beat === "click" ? "square" : "sine";
-  oscillator.frequency.setValueAtTime(beat === "click" ? 1720 : 690, time);
-  if (beat === "click") oscillator.frequency.exponentialRampToValueAtTime(280, time + duration);
-  gain.gain.setValueAtTime(beat === "click" ? .13 : .21, time);
-  gain.gain.exponentialRampToValueAtTime(.001, time + duration);
-  oscillator.connect(gain).connect(context.destination);
-  oscillator.start(time);
-  oscillator.stop(time + duration);
-}
-
-export default function SignalPerformance({ signal, onComplete }: {
+export default function SignalPerformance({ signal, onComplete, onGesture }: {
   signal: Signal;
   onComplete?: () => void;
+  onGesture?: (pose: Pose | null) => void;
 }) {
-  const timers = useRef<number[]>([]);
-  const audio = useRef<AudioContext | null>(null);
+  const stop = useRef<(() => void) | null>(null);
   const [step, setStep] = useState(-1);
   const [playing, setPlaying] = useState(false);
   const [audioUnavailable, setAudioUnavailable] = useState(false);
 
-  useEffect(() => () => {
-    timers.current.forEach(window.clearTimeout);
-    if (audio.current) void audio.current.close();
-  }, []);
+  useEffect(() => () => stop.current?.(), []);
 
   function start() {
-    if (playing) return;
-    const interval = signal.kind === "sound" ? 430 : signal.kind === "glyph" ? 670 : 820;
+    if (stop.current) return;
+    const interval = signal.kind === "sound" ? acousticBeat : signal.kind === "glyph" ? .67 : 1.25;
+    const lead = signal.kind === "sound" ? acousticLead : .3;
+    let clip: HTMLAudioElement | null = null;
+    let url: string | undefined;
+    let frame = 0;
+    let previousStep = -1;
+    let started = performance.now();
+    let cancelled = false;
+
+    function dispose() {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+      clip?.pause();
+      if (url) URL.revokeObjectURL(url);
+      stop.current = null;
+    }
+
+    function tick(now: number) {
+      const elapsed = clip ? clip.currentTime : (now - started) / 1000;
+      const index = Math.min(signal.beats.length - 1, Math.max(-1, Math.floor((elapsed - lead) / interval)));
+      if (index !== previousStep) {
+        previousStep = index;
+        setStep(index);
+        if (signal.kind === "gesture") onGesture?.(signal.beats[index] ?? null);
+      }
+      if (clip?.ended || (!clip && elapsed >= lead + signal.beats.length * interval + .15)) {
+        dispose();
+        setPlaying(false);
+        onGesture?.(null);
+        onComplete?.();
+      } else {
+        frame = window.requestAnimationFrame(tick);
+      }
+    }
+
+    function fallback() {
+      if (cancelled || !clip) return;
+      clip.onerror = null;
+      clip.pause();
+      clip = null;
+      started = performance.now() - Math.max(0, lead + previousStep * interval) * 1000;
+      setAudioUnavailable(true);
+    }
+
+    stop.current = dispose;
+    onGesture?.(null);
     setStep(-1);
     setPlaying(true);
     setAudioUnavailable(false);
     if (signal.kind === "sound") {
       try {
-        const context = new AudioContext();
-        audio.current = context;
-        void context.resume().catch(() => { if (audio.current === context) setAudioUnavailable(true); });
-        const startTime = context.currentTime + .09;
-        signal.beats.forEach((beat, index) => scheduleSound(context, beat, startTime + index * interval / 1000));
+        url = URL.createObjectURL(createAcousticClip(signal.beats));
+        clip = new Audio(url);
+        clip.onerror = fallback;
+        void clip.play().catch(fallback);
       } catch {
+        clip = null;
         setAudioUnavailable(true);
       }
     }
-    timers.current = signal.beats.map((_, index) => window.setTimeout(() => setStep(index), 90 + index * interval));
-    timers.current.push(window.setTimeout(() => {
-      setPlaying(false);
-      timers.current = [];
-      if (audio.current) {
-        void audio.current.close();
-        audio.current = null;
-      }
-      onComplete?.();
-    }, 90 + signal.beats.length * interval + 80));
+    frame = window.requestAnimationFrame(tick);
   }
 
   const pose = signal.kind === "gesture" && step >= 0 ? signal.beats[step] : null;
@@ -76,12 +98,17 @@ export default function SignalPerformance({ signal, onComplete }: {
         ))}
       </div>}
       {signal.kind === "gesture" && <div className="signal-stage">
-        <div className="signal-mover" data-pose={pose ?? "ready"} aria-hidden="true">
-          <i className="signal-head" /><i className="signal-torso" /><i className="signal-arm signal-arm-left" />
-          <i className="signal-arm signal-arm-right" /><i className="signal-legs" />
+        <div className="signal-gesture-view" data-pose={pose ?? "ready"} aria-hidden="true">
+          <span className="walk-sprite npc-1 signal-ghost" />
+          <span className="walk-sprite npc-1 signal-mover" />
+          {pose && <span className="signal-direction">
+            {pose === "wait" ? <i className="signal-pause" /> : <PixelIcon name={pose} />}
+          </span>}
         </div>
-        <div className="signal-pose-log" aria-label="Gesture sequence">
-          {signal.beats.slice(0, step + 1).map((beat, index) => <span key={index}>{poses[beat]}</span>)}
+        <div className="signal-pose-log" aria-label="Gesture sequence" aria-live="polite">
+          {signal.beats.slice(0, step + 1).map((beat, index) => (
+            <span data-current={index === step} key={index}>{index + 1}. {poses[beat]}</span>
+          ))}
         </div>
       </div>}
       {signal.kind === "glyph" && <div className="signal-tablet" aria-label="Stone inscription">
