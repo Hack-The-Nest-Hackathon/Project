@@ -7,19 +7,20 @@ import type { Progress } from "../../lib/api/saves";
 import type { Scene } from "../../lib/api/world";
 import PhotoPrint from "./photo-print";
 
-const stickerArt: Record<string, string> = {
-  rocket: "🚀",
-  "red-planet": "🪐",
-  star: "⭐",
-  "nasa-patch": "NASA",
-  meteor: "☄️",
-  moon: "🌙",
-  "shooting-star": "🌠",
-  "blue-planet": "🌎",
-};
+const stickerIcons = {
+  rocket: "rocket",
+  "red-planet": "ringedPlanet",
+  star: "marker",
+  "nasa-patch": "badge",
+  meteor: "meteor",
+  moon: "crescent",
+  "shooting-star": "shootingStar",
+  "blue-planet": "planet",
+} as const;
 
-export default function Scrapbook({ accountId, progress, world, reducedMotion, onCapture, onClose }: {
+export default function Scrapbook({ accountId, flushSaves, progress, world, reducedMotion, onCapture, onClose }: {
   accountId: string;
+  flushSaves: () => Promise<boolean>;
   progress: Progress;
   world: Scene[];
   reducedMotion: boolean | null;
@@ -32,7 +33,9 @@ export default function Scrapbook({ accountId, progress, world, reducedMotion, o
   const [direction, setDirection] = useState(1);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [stickers, setStickers] = useState<StickerAchievement[]>([]);
+  const [view, setView] = useState<"photos" | "achievements">("photos");
+  const [stickers, setStickers] = useState<StickerAchievement[] | null>(null);
+  const [stickerAttempt, setStickerAttempt] = useState(0);
   const [stickerError, setStickerError] = useState("");
   const sceneId = progress.badges[page];
   const photo = progress.photos?.find((item) => item.sceneId === sceneId);
@@ -40,15 +43,30 @@ export default function Scrapbook({ accountId, progress, world, reducedMotion, o
 
   useEffect(() => {
     dialog.current?.showModal();
+    return () => request.current?.abort();
+  }, []);
+
+  useEffect(() => {
+    if (view !== "achievements") return;
     const controller = new AbortController();
-    getAchievements(accountId, controller.signal).then(setStickers).catch(() => {
-      if (!controller.signal.aborted) setStickerError("Earned stickers couldn't be loaded. Close and reopen your scrapbook to retry.");
-    });
-    return () => {
-      request.current?.abort();
-      controller.abort();
-    };
-  }, [accountId]);
+    async function loadStickers() {
+      try {
+        await flushSaves();
+        controller.signal.throwIfAborted();
+        const catalog = await getAchievements(accountId, controller.signal);
+        if (!controller.signal.aborted) setStickers(catalog);
+      } catch {
+        if (!controller.signal.aborted) setStickerError("Achievements couldn't be loaded.");
+      }
+    }
+    void loadStickers();
+    return () => controller.abort();
+  }, [accountId, flushSaves, stickerAttempt, view]);
+
+  function openAchievements() {
+    setStickerError("");
+    setView("achievements");
+  }
 
   function flip(offset: number) {
     if (loading || page + offset < 0 || page + offset >= progress.badges.length) return;
@@ -77,7 +95,7 @@ export default function Scrapbook({ accountId, progress, world, reducedMotion, o
   return (
     <dialog ref={dialog} className="expedition-scrapbook" aria-labelledby="scrapbook-title" onClose={onClose}
       onKeyDown={(event) => {
-        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        if (view === "photos" && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
           event.preventDefault();
           flip(event.key === "ArrowLeft" ? -1 : 1);
         }
@@ -86,7 +104,46 @@ export default function Scrapbook({ accountId, progress, world, reducedMotion, o
         <h2 id="scrapbook-title"><PixelIcon name="journal" /> Expedition scrapbook</h2>
         <button type="button" className="game-button" onClick={() => dialog.current?.close()}>Close</button>
       </header>
-      <div className="scrapbook-pages">
+      <nav className="scrapbook-tabs" aria-label="Scrapbook sections">
+        <button type="button" className="game-button" aria-pressed={view === "photos"} onClick={() => setView("photos")}>
+          <PixelIcon name="camera" /> Photos
+        </button>
+        <button type="button" className="game-button" aria-pressed={view === "achievements"} onClick={openAchievements}>
+          <PixelIcon name="badge" /> Achievements
+        </button>
+      </nav>
+      {view === "achievements" ? <motion.section className="scrapbook-leaf achievement-leaf"
+        initial={reducedMotion ? false : { opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+        aria-labelledby="sticker-heading">
+        <div className="achievement-heading">
+          <h3 id="sticker-heading">Achievement stickers</h3>
+          {stickers && <p>{stickers.filter(({ earnedAt }) => earnedAt).length} / {stickers.length} earned</p>}
+        </div>
+        {stickerError && <div className="flex flex-wrap items-center gap-2">
+          <p role="status">{stickerError}</p>
+          <button type="button" className="game-button" onClick={() => {
+            setStickerError("");
+            setStickerAttempt((attempt) => attempt + 1);
+          }}>Retry</button>
+        </div>}
+        {!stickers && !stickerError && <p role="status">Loading achievements…</p>}
+        {stickers && <ul className="achievement-grid">{stickers.map((sticker) => {
+          const earned = Boolean(sticker.earnedAt);
+          const count = earned ? sticker.threshold : Math.min(sticker.progress, sticker.threshold);
+          const icon = stickerIcons[sticker.stickerId as keyof typeof stickerIcons] ?? "badge";
+          return <li key={sticker.id} className="achievement-card" data-earned={earned}>
+            <span className="achievement-art" data-sticker={sticker.stickerId}><PixelIcon name={icon} /></span>
+            <div className="achievement-info">
+              <strong>{sticker.title}</strong>
+              <p>{sticker.description}</p>
+              <div className="achievement-progress">
+                <progress aria-label={sticker.title} value={count} max={sticker.threshold} />
+                <span>{earned ? "Earned" : `${count} / ${sticker.threshold}`}</span>
+              </div>
+            </div>
+          </li>;
+        })}</ul>}
+      </motion.section> : <div className="scrapbook-pages">
         <AnimatePresence mode="wait" initial={false} custom={direction}>
           <motion.section key={sceneId ?? "empty"} className="scrapbook-leaf" custom={direction}
             variants={{
@@ -105,24 +162,11 @@ export default function Scrapbook({ accountId, progress, world, reducedMotion, o
                 </button>
                 {error && <p role="status">{error}</p>}
               </>}
-              {photo && <section className="scrapbook-stickers" aria-label="Earned achievement stickers">
-                <h4>Achievement stickers</h4>
-                {stickerError ? <p role="status">{stickerError}</p> : stickers.length
-                  ? <ul>{stickers.map((sticker) => <li key={sticker.id} title={`${sticker.title}: ${sticker.description}`}>
-                    <span className="scrapbook-sticker-art" data-sticker={sticker.stickerId} aria-hidden="true">
-                      {stickerArt[sticker.stickerId] ?? "✦"}
-                    </span>
-                    <span>{sticker.stickerName}</span>
-                    <small>{sticker.title}</small>
-                    <small>{sticker.description}</small>
-                  </li>)}</ul>
-                  : <p>Earn achievements to collect space stickers.</p>}
-              </section>}
             </> : <p>Pass a planet’s translation check to add your first NASA photo.</p>}
           </motion.section>
         </AnimatePresence>
-      </div>
-      {progress.badges.length > 0 && <nav className="scrapbook-pagination" aria-label="Scrapbook pages">
+      </div>}
+      {view === "photos" && progress.badges.length > 0 && <nav className="scrapbook-pagination" aria-label="Scrapbook pages">
         <button type="button" className="game-button" onClick={() => flip(-1)} disabled={loading || page === 0}><PixelIcon name="left" /> Previous</button>
         <span aria-live="polite">{page + 1} / {progress.badges.length}</span>
         <button type="button" className="game-button" onClick={() => flip(1)} disabled={loading || page === progress.badges.length - 1}>Next <PixelIcon name="right" /></button>

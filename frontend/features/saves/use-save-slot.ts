@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { isProgress, loadSaves, saveProgress, type Progress } from "../../lib/api/saves";
 
 type Slots = Partial<Record<number, Progress>>;
-const emptySave: Progress = { planet: "market", observed: [], badges: [] };
+const emptySave: Progress = { planet: "market", observed: [], badges: [], visited: [] };
 const prefix = "voices-saves:";
 
 export function clearSaveCache(accountId: string) {

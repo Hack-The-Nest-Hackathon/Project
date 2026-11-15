@@ -7,7 +7,11 @@ export default {
     if (!request.account) return reply.code(401).send({ message: "Sign in to continue." });
     try {
       const saves = await listSaves(request.account.id);
-      await grantQualifiedAchievements(request.account.id, saves);
+      try {
+        await grantQualifiedAchievements(request.account.id, saves);
+      } catch (error) {
+        request.log.warn({ errorName: error instanceof Error ? error.name : "Unknown" }, "Achievement grant deferred");
+      }
       return reply.send(saves);
     } catch (error) {
       request.log.warn({ errorName: error instanceof Error ? error.name : "Unknown" }, "Save list failed");

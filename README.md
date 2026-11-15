@@ -23,6 +23,21 @@ Open [localhost:3000](http://localhost:3000). Next.js proxies `/api/*` to Fastif
 
 Copy backend/.env.example to backend/.env. Set ELEVENLABS_API_KEYS to a JSON array of TTS-enabled API keys and ELEVENLABS_VOICE_ID to a voice each key can use. New clips rotate through the keys. Replays use the process-local cache. Set ELEVENLABS_CONCURRENCY within the workspace limit. With no credentials, players can use transcripts.
 
+## Run the backend in Docker
+
+Build from the repository root so Docker can use the shared npm lockfile. Pass your configured backend environment at runtime.
+
+```sh
+docker build -f backend/Dockerfile -t voices-backend .
+docker run --rm --name voices-backend --env-file backend/.env -e HOST=0.0.0.0 -e PORT=3001 -p 127.0.0.1:3001:3001 voices-backend
+```
+
+Check [localhost:3001/api/health](http://localhost:3001/api/health). A frontend running on your host can keep its default backend URL. Configure the SSOJet callback for the frontend origin as above.
+
+If PostgreSQL runs on your host, use `host.docker.internal` in `DATABASE_URL` instead of `127.0.0.1`. On Linux Docker Engine, also pass `--add-host=host.docker.internal:host-gateway` to `docker run`. For a remote database, keep its existing address.
+
+To play pre-generated planet music, add `--mount type=bind,source=<absolute-path-to-backend/.music-cache>,target=/app/backend/.music-cache,readonly` to `docker run`.
+
 ## Backend routes
 
 Fastify discovers method files under backend/src/routes at startup. Export a default object with a handler and any Fastify route options. A folder like [lineId] becomes a URL parameter.

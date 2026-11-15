@@ -1347,39 +1347,47 @@ body:has(.field-game) { overflow: hidden; }
 }
 .nasa-photo-print figcaption { display: grid; gap: .18rem; padding: .4rem .3rem .25rem; font-size: .82rem; overflow-wrap: anywhere; }
 .nasa-photo-print a { color: #28564d; text-decoration: underline; }
-.scrapbook-stickers { margin: .8rem auto 0; max-width: 35rem; }
-.scrapbook-stickers h4 { margin-bottom: .35rem; font-family: var(--display); }
-.scrapbook-stickers ul { display: flex; flex-wrap: wrap; gap: .45rem; padding: 0; list-style: none; }
-.scrapbook-stickers li {
-  display: grid;
-  justify-items: center;
-  gap: .15rem;
-  min-width: 4.3rem;
-  padding: .35rem;
-  border: 1px solid #8a7258;
-  border-radius: .55rem;
-  background: #f3e9d7;
-  font-size: .65rem;
-  text-align: center;
+.scrapbook-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  margin-block: .7rem;
 }
-.scrapbook-sticker-art {
+.scrapbook-tabs button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+.achievement-leaf { display: grid; gap: .75rem; text-align: start; }
+.achievement-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .3rem .65rem; }
+.achievement-heading p { color: #594937; font-size: .75rem; }
+.achievement-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: .5rem; }
+.achievement-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: .65rem;
+  padding: .65rem;
+  border: 1px solid #a88e6d;
+  background: #eee3cc;
+  box-shadow: 0 2px #d0b99a;
+}
+.achievement-art {
   display: grid;
   place-items: center;
-  width: 2.4rem;
-  height: 2.4rem;
-  border: 2px dashed #7b654a;
-  border-radius: 50%;
-  color: #263c61;
-  font-size: 1.25rem;
-  font-weight: 900;
+  width: 2.85rem;
+  height: 2.85rem;
+  border: 2px solid #5a6671;
+  background: #222d3b;
+  color: #e8c17a;
+  box-shadow: 2px 2px #b5a086;
 }
-.scrapbook-sticker-art[data-sticker="nasa-patch"] {
-  border-radius: .5rem;
-  background: #e8f0ff;
-  color: #155bbc;
-  font-size: .75rem;
-}
-.scrapbook-stickers li small { max-width: 7rem; color: #564735; font-size: .6rem; }
+.achievement-art .pixel-icon { width: 2rem; height: 2rem; filter: drop-shadow(2px 2px #101722); }
+.achievement-art[data-sticker="rocket"], .achievement-art[data-sticker="blue-planet"] { color: #9dd6cb; }
+.achievement-art[data-sticker="red-planet"], .achievement-art[data-sticker="meteor"] { color: #ef9f85; }
+.achievement-art[data-sticker="nasa-patch"], .achievement-art[data-sticker="moon"] { color: #bac7ef; }
+.achievement-card[data-earned="false"] .achievement-art { color: #a6adb4; background: #3b434b; }
+.achievement-card[data-earned="true"] { border-color: #738775; background: #f0ead6; }
+.achievement-info { display: grid; gap: .25rem; }
+.achievement-info p { color: #584838; font-size: .72rem; }
+.achievement-progress { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; font-size: .7rem; }
+.achievement-progress progress { flex: 1 1 3rem; min-width: 0; height: .45rem; accent-color: #426854; }
 .photo-image-fallback { padding: .8rem; }
 .photo-capture { padding: .65rem; border: 1px solid var(--edge); border-radius: .7rem; }
 .photo-capture h3 { color: var(--gold); font-family: var(--display); }

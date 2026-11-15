@@ -64,11 +64,15 @@ export default {
     }
     try {
       await upsertSave(request.account.id, Number(request.params.slot), request.body);
-      await grantQualifiedAchievements(request.account.id);
-      return reply.code(204).send();
     } catch (error) {
       request.log.warn({ errorName: error instanceof Error ? error.name : "Unknown" }, "Save write failed");
       return reply.code(503).send({ message: "Cloud saves are unavailable." });
     }
+    try {
+      await grantQualifiedAchievements(request.account.id);
+    } catch (error) {
+      request.log.warn({ errorName: error instanceof Error ? error.name : "Unknown" }, "Achievement grant deferred");
+    }
+    return reply.code(204).send();
   },
 };

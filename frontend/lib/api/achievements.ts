@@ -6,7 +6,9 @@ export type StickerAchievement = {
   description: string;
   stickerId: string;
   stickerName: string;
-  earnedAt: string;
+  threshold: number;
+  progress: number;
+  earnedAt: string | null;
 };
 
 export function getAchievements(accountId: string, signal: AbortSignal) {

@@ -77,7 +77,10 @@ export default function ExpeditionGame() {
   }, [attempt]);
 
   function travel(planet: string) {
-    if (planet !== progress.planet) save({ ...progress, planet });
+    const visited = progress.visited ?? (progress.planet === "market" ? [] : [progress.planet]);
+    if (planet !== progress.planet || !visited.includes(planet)) {
+      save({ ...progress, planet, visited: [...new Set([...visited, planet])] });
+    }
     setScreen("field");
   }
 
@@ -122,13 +125,13 @@ export default function ExpeditionGame() {
             <button type="button" className="game-button" onClick={() => setScreen("slots")}>
               <PixelIcon name="save" /> Save files
             </button>
-            <button type="button" className="game-button" aria-haspopup="dialog" onClick={() => setScrapbookOpen(true)}>
-              <PixelIcon name="camera" /> Scrapbook
-            </button>
           </>}
           {screen === "title" && <BriefingLink href="/about" className="game-button navigation-link">
             <PixelIcon name="journal" /> Mission briefing
           </BriefingLink>}
+          <button type="button" className="game-button" aria-haspopup="dialog" onClick={() => setScrapbookOpen(true)}>
+            <PixelIcon name="journal" /> Scrapbook
+          </button>
           {musicControl}
           <button type="button" className="game-button" disabled={signingOut} onClick={() => void leaveAccount()}>
             <PixelIcon name="back" /> {signingOut ? "Signing out." : "Sign out"}
@@ -179,7 +182,7 @@ export default function ExpeditionGame() {
         )}
       </AnimatePresence>
       {friendsOpen && <FriendsPanel accountId={account.id} reducedMotion={reducedMotion} close={() => setFriendsOpen(false)} />}
-      {scrapbookOpen && <Scrapbook accountId={account.id} progress={progress} world={world} reducedMotion={reducedMotion}
+      {scrapbookOpen && <Scrapbook accountId={account.id} flushSaves={flushSaves} progress={progress} world={world} reducedMotion={reducedMotion}
         onCapture={savePhoto} onClose={() => setScrapbookOpen(false)} />}
       {syncFailed && <button className="game-button fixed bottom-4 right-4 z-20" onClick={() => void flushSaves()}>
         Retry save sync

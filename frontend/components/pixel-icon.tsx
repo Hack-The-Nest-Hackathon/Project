@@ -1,4 +1,10 @@
 const shapes = {
+  rocket: "M9 1h5v5h-1v3h-2v2H9v3H7v-2H5v2H3v-2H1v-2h3V8h2V6h2V3h1zm1 3v3h3V4zM1 13h2v2H1z",
+  ringedPlanet: "M6 3h5v1h2v3h3v3h-2v1h-3v2H5v-1H3v-1H0V8h2V7h2V5h2zm7 5v2h2V8zM1 9v1h2V9z",
+  planet: "M5 2h6v1h2v2h1v6h-1v2h-2v1H5v-1H3v-2H2V5h1V3h2zm0 3v2h3V5zm5 4v2h2V9zM5 10v2h2v-2z",
+  crescent: "M7 1h4v1H9v2H8v5h2v2h3v-1h2v2h-2v2H5v-1H3v-2H2V5h2V3h3z",
+  meteor: "M13 1h2v2h-2v2h-2v2h2v2h-1v3h-2v2H4v-1H2V8h2V6h3V4h2V2h2v2h2zm-7 8v2h2V9z",
+  shootingStar: "M11 1h2v3h3v2h-2v2h1v2h-2V9h-2v1H9V8h1V6H8V4h3zM6 7h2v2H6zM3 10h3v2H3zm-3 3h3v2H0z",
   menu: "M2 3h12v2H2zm0 4h12v2H2zm0 4h12v2H2z",
   apple: "M8 1h3v2H9v2h3v1h2v6h-1v2h-3v1H6v-1H3v-2H2V7h2V5h4z",
   bread: "M5 3h7v1h2v2h1v5h-1v2H2v-1H1V8h1V6h1V4h2zm1 2H4v3h2zm4 0H8v3h2zm3 1h-2v3h2z",
