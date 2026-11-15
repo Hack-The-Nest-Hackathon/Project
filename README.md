@@ -40,7 +40,7 @@ Open [localhost:3000](http://localhost:3000). To run the backend in a container,
 | [backend/](backend/) | Fastify API, language generation, dialogue and speech, translation checks, and account services |
 | [backend/database/](backend/database/) | PostgreSQL schema and queries for accounts, saves, friends, and achievements |
 
-Next.js forwards browser requests from `/api/*` to Fastify. The default backend address is `http://127.0.0.1:3001`. If the API runs elsewhere, set `BACKEND_URL` in `frontend/.env.local` before starting or building the frontend.
+Next.js forwards every `/api/*` request to the server-side `BACKEND_URL`, including sign-in, saves, and game audio. The default is `http://127.0.0.1:3001`. Set `BACKEND_URL` in the frontend server environment or `frontend/.env.local` before starting Next.js. The frontend reads it at runtime, so changing the backend address only requires restarting the frontend server.
 
 Each account has three cloud save slots. The browser caches the last confirmed saves and retries queued changes when connectivity returns. The production frontend includes a web app manifest and service worker for the app shell and game assets.
 
