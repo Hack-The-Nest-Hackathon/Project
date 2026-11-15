@@ -1,3 +1,4 @@
+import { world } from "../../../world.js";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { upsertSave } from "../../../../database/index.js";
 import { grantQualifiedAchievements } from "../../../achievement-service.js";
@@ -41,7 +42,7 @@ export default {
         visited: ids,
         character: characterSchema,
         photos: {
-          type: "array", maxItems: 27, items: {
+          type: "array", maxItems: world.length, items: {
             type: "object", additionalProperties: false,
             required: ["sceneId", "nasaId", "title", "credit", "imageUrl"],
             properties: {

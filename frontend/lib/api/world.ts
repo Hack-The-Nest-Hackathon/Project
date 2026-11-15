@@ -1,10 +1,16 @@
 import { request } from "./client";
 
+export type Signal =
+  | { kind: "sound"; beats: ("click" | "chime")[] }
+  | { kind: "gesture"; beats: ("left" | "right" | "wait")[] }
+  | { kind: "glyph"; beats: ("bring" | "check" | "lantern" | "marker")[] };
+
 export type Clue = {
   id: string; speaker: string; context: string; phrase: string; pronunciation?: string;
   translation?: string; glosses?: string[];
   opening?: { npc: string; player: string; question: string; bridge: string; speak?: string };
   roles?: string[];
+  signal?: Signal;
   followUp?: { id: string; phrase: string; pronunciation?: string; translation: string; prompt: string; promptAudioId?: string; alternatives: string[]; glosses?: string[]; roles?: string[] };
   replies?: { id: string; phrase: string; pronunciation?: string; translation: string; glosses?: string[]; roles: string[]; choice: string; prompt: string; promptAudioId?: string; acknowledgment: string; acknowledgmentAudioId?: string }[];
   practice?: { id: string; word: string; pronunciation?: string }[];
@@ -20,7 +26,7 @@ export type Scene = {
   audioRevision?: string;
   mission?: { briefing: string; difficulty: number; grammar: string };
   clues: Clue[];
-  questions: { prompt: string; options: string[]; phrase?: string; pronunciation?: string; audioId?: string; glosses?: (string | null)[] }[];
+  questions: { prompt: string; options: string[]; phrase?: string; pronunciation?: string; audioId?: string; signal?: Signal; glosses?: (string | null)[] }[];
 };
 
 export const getWorld = (signal: AbortSignal) => request<Scene[]>("world", { signal });

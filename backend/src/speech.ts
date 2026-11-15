@@ -137,7 +137,7 @@ async function synthesize(voiceId: string, settings: ReturnType<typeof voiceSett
 
 export function getSpeech(lineId: string): Promise<Buffer> {
   const line = lines.get(lineId) ?? quizLines.get(lineId) ?? practiceLines.get(lineId);
-  if (!line) throw new SpeechError(404, "Line not found");
+  if (!line || line.silent) throw new SpeechError(404, "Spoken line not found");
   const role = line.voiceRole ?? "";
   const profile = cast[role];
   const voice = customVoices[role] ?? profile?.id ?? fallbackVoice ?? cast.player.id;

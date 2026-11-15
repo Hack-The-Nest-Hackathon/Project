@@ -107,7 +107,7 @@ export default function StarChart({ worlds, current, selected, badges, reducedMo
                 aria-pressed={active}
                 aria-label={`${world.title}${world.id === current ? ", current location" : ""}${locked ? `, requires ${world.requiredBadges} badges` : ""}`}
                 onClick={() => onSelect(world.id)}>
-                <span className="planet-icon" style={{ backgroundImage: `url(/worlds/${encodeURIComponent(world.id)}.png)` }} aria-hidden="true" />
+                <span className="planet-icon" data-world={world.id} style={world.id === "echo-basin" ? undefined : { backgroundImage: `url(/worlds/${encodeURIComponent(world.id)}.png)` }} aria-hidden="true" />
                 <span className="chart-world-name">{locked && <PixelIcon name="lock" />}{world.title}</span>
               </button>
             );

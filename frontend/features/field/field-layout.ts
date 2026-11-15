@@ -51,6 +51,7 @@ export function surveyStations(scene: Scene): Stop[] {
 }
 
 export function fieldRegion(scene: Scene) {
+  if (scene.id === "echo-basin") return "basin";
   if (scene.id === "market") return "market";
   if (scene.id === "outpost") return "outpost";
   if (scene.region === "harbor") return "harbor";

@@ -1783,3 +1783,64 @@ body:has(.field-game) { overflow: hidden; }
   .crew-add { grid-template-columns: 1fr; }
   .crew-tabs .game-button { flex: 1 1 auto; padding-inline: .65rem; }
 }
+
+/* Echo Basin */
+[data-world="echo-basin"].planet-icon, [data-world="echo-basin"].destination-sprite {
+  background: repeating-linear-gradient(155deg, #787088 0 13%, #3c3b55 13% 25%, #7aaea5 25% 32%, #53516e 32% 49%);
+  clip-path: polygon(33% 0,67% 0,67% 8%,83% 8%,83% 17%,92% 17%,92% 33%,100% 33%,100% 67%,92% 67%,92% 83%,83% 83%,83% 92%,67% 92%,67% 100%,33% 100%,33% 92%,17% 92%,17% 83%,8% 83%,8% 67%,0 67%,0 33%,8% 33%,8% 17%,17% 17%,17% 8%,33% 8%);
+}
+.field-game .walk-stage[data-region="basin"] {
+  background-image: linear-gradient(#24223b44, #33284822 45%, #3d3542 75%), url("/orbit.png");
+  image-rendering: pixelated;
+}
+.signal-encounter, .signal-performance { display: grid; justify-items: start; gap: .55rem; }
+.signal-encounter > *, .signal-performance { width: 100%; }
+.signal-performance .game-button { width: fit-content; }
+.signal-sequence, .signal-tablet, .signal-stage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem;
+  min-height: 3.1rem;
+  width: 100%;
+  padding: .45rem;
+  border: 1px solid #697082;
+  background: #1d2431;
+  color: #f0e7cb;
+}
+.signal-beat, .signal-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .25rem;
+  min-height: 2.25rem;
+  min-width: 2.2rem;
+  padding: .15rem .35rem;
+  border: 1px solid #6b7181;
+  font-size: .75rem;
+}
+.signal-beat[data-revealed="true"] { background: #354957; }
+.signal-beat[data-current="true"] { border-color: #dcb77f; color: #ffe5ab; }
+.signal-tablet { background: #625465; box-shadow: inset 0 -3px #493e53; }
+.signal-glyph { min-width: 2.75rem; border-color: #8d788a; background: #393444; }
+.signal-engraving { position: relative; display: inline-flex; color: #f6d49c; animation: carve-glyph .52s steps(10) both; }
+.signal-engraving .pixel-icon { width: 1.55rem; height: 1.55rem; }
+@keyframes carve-glyph { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+.signal-stage { flex-wrap: nowrap; gap: .9rem; min-height: 5.15rem; }
+.signal-mover { position: relative; flex: 0 0 4.65rem; height: 4rem; transition: transform .18s steps(3); }
+.signal-mover i { position: absolute; display: block; }
+.signal-head { left: 1.7rem; top: .12rem; width: 1.2rem; height: 1.1rem; background: #bb8caf; box-shadow: inset 0 -.18rem #795d83; }
+.signal-head::after { content: ""; position: absolute; top: .37rem; left: .23rem; width: .15rem; height: .18rem; background: #272331; box-shadow: .52rem 0 #272331; }
+.signal-torso { top: 1.18rem; left: 1.6rem; width: 1.4rem; height: 1.42rem; background: #7fb6ac; box-shadow: inset 0 -.26rem #537d82; }
+.signal-arm { top: 1.37rem; width: 1.36rem; height: .42rem; background: #7fb6ac; transition: transform .2s steps(3); }
+.signal-arm-left { left: .3rem; transform: rotate(-55deg); transform-origin: right center; }
+.signal-arm-right { right: .35rem; transform: rotate(55deg); transform-origin: left center; }
+.signal-legs { top: 2.5rem; left: 1.61rem; width: .42rem; height: 1.05rem; background: #9389ba; box-shadow: .94rem 0 #9389ba; }
+.signal-mover[data-pose="left"] .signal-arm-left, .signal-mover[data-pose="right"] .signal-arm-right { transform: rotate(0); }
+.signal-mover[data-pose="wait"] { transform: translateY(.58rem) scaleY(.82); }
+.signal-pose-log { display: flex; flex-wrap: wrap; gap: .3rem; font-size: .75rem; }
+.signal-pose-log span { padding: .2rem .3rem; background: #34394d; }
+@media (prefers-reduced-motion: reduce) {
+  .signal-engraving { animation: none; }
+  .signal-mover, .signal-arm { transition: none; }
+}

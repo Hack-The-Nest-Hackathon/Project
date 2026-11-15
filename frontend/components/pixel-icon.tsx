@@ -1,4 +1,5 @@
 const shapes = {
+  hookGlyph: "M10 1h3v8h-2v3H9v2H4v-2H2V7h4v2H4v2h5V8h1z",
   rocket: "M9 1h5v5h-1v3h-2v2H9v3H7v-2H5v2H3v-2H1v-2h3V8h2V6h2V3h1zm1 3v3h3V4zM1 13h2v2H1z",
   ringedPlanet: "M6 3h5v1h2v3h3v3h-2v1h-3v2H5v-1H3v-1H0V8h2V7h2V5h2zm7 5v2h2V8zM1 9v1h2V9z",
   planet: "M5 2h6v1h2v2h1v6h-1v2h-2v1H5v-1H3v-2H2V5h1V3h2zm0 3v2h3V5zm5 4v2h2V9zM5 10v2h2v-2z",

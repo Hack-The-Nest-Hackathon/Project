@@ -1,15 +1,21 @@
 import { createHash } from "node:crypto";
 type Observation = { label: string; prop: "apple" | "bread" | "lantern" | "marker" | "crate"; count: number; action: "show" | "load" | "carry" | "see" };
+import { echoBasin } from "./echo-basin.js";
 import { createMission } from "./missions.js";
 import { marketScene, outpostScene } from "./starter-missions.js";
 import { speechLanguage } from "./language/lexicon.js";
 
+export type Signal =
+  | { kind: "sound"; beats: ("click" | "chime")[] }
+  | { kind: "gesture"; beats: ("left" | "right" | "wait")[] }
+  | { kind: "glyph"; beats: ("bring" | "check" | "lantern" | "marker")[] };
+
 export type Reply = { choice: string; roles: string[]; phrase: string; pronunciation?: string; translation: string; glosses?: string[]; prompt: string; acknowledgment: string };
 type FollowUp = { phrase: string; translation: string; prompt: string; alternatives: string[]; pronunciation?: string; glosses?: string[]; roles?: string[] };
-export type Clue = { id: string; speaker: string; context: string; phrase: string; pronunciation?: string; translation?: string; glosses?: string[]; roles?: string[]; replies?: Reply[]; followUp?: FollowUp; observation?: Observation };
+export type Clue = { id: string; speaker: string; context: string; phrase: string; pronunciation?: string; translation?: string; glosses?: string[]; roles?: string[]; replies?: Reply[]; followUp?: FollowUp; observation?: Observation; signal?: Signal };
 export type Question = {
   prompt: string; options: string[]; answer: number; phrase?: string; pronunciation?: string;
-  glosses?: string[];
+  glosses?: string[]; signal?: Signal;
 };
 export type Scene = { id: string; title: string; language: string; description: string; region: "harbor" | "highland" | "dune"; mission?: { briefing: string; difficulty: number; grammar: string }; clues: Clue[]; questions: Question[]; hints: string[] };
 
@@ -20,12 +26,13 @@ const planetNames = [
 ];
 const generated = planetNames.map((name, index) => createMission(index, name, index % 3));
 
-export const scenes = [marketScene, outpostScene, ...generated];
+export const scenes = [marketScene, outpostScene, echoBasin, ...generated];
 
 export type SpokenLine = {
   phrase: string;
   language: string;
   voiceRole?: string;
+  silent?: boolean;
   delivery?: "greeting" | "question" | "praise";
 };
 export const lines = new Map<string, SpokenLine>();
@@ -63,9 +70,11 @@ function castRole(scene: Scene, clue: Clue) {
 }
 export const quizLines = new Map<string, SpokenLine>();
 for (const scene of scenes) {
-  for (const clue of scene.clues) lines.set(clue.id, { phrase: clue.phrase, language: speechLanguage, voiceRole: castRole(scene, clue) });
-  scene.questions.forEach(({ phrase }, index) => {
-    if (phrase) quizLines.set(`${scene.id}-quiz-${index}`, { phrase, language: speechLanguage });
+  for (const clue of scene.clues) lines.set(clue.id, {
+    phrase: clue.phrase, language: speechLanguage, voiceRole: castRole(scene, clue), silent: Boolean(clue.signal),
+  });
+  scene.questions.forEach(({ phrase, signal }, index) => {
+    if (phrase && !signal) quizLines.set(`${scene.id}-quiz-${index}`, { phrase, language: speechLanguage });
   });
 }
 
@@ -77,6 +86,7 @@ export const practiceLines = new Map<string, SpokenLine & { sceneId: string }>()
 const vocabulary = new Map<string, { id: string; word: string; pronunciation?: string }[]>();
 for (const scene of scenes) {
   for (const clue of scene.clues) {
+    if (clue.signal) continue;
     const voiceRole = castRole(scene, clue);
     const opening = openingFor(scene, clue);
     lines.set(`${clue.id}-hello`, { phrase: opening.npc, language: "en", voiceRole, delivery: "greeting" });
@@ -111,7 +121,7 @@ export const world = scenes.map((catalogScene, index) => {
   const { hints: _hints, clues, questions, ...scene } = catalogScene;
   return {
     ...scene,
-    requiredBadges: Math.max(0, index - 1),
+    requiredBadges: scene.id === echoBasin.id ? 1 : Math.max(0, index >= 3 ? index - 2 : index - 1),
     audioRevision: createHash("sha256").update(JSON.stringify([
       "character-dialogue-v3", speechLanguage, process.env.ELEVENLABS_VOICE_ID, process.env.ELEVENLABS_CHARACTER_VOICES, process.env.ELEVENLABS_MODEL_ID,
       clues.map((clue) => openingFor(catalogScene, clue)),
@@ -120,7 +130,7 @@ export const world = scenes.map((catalogScene, index) => {
     ])).digest("hex").slice(0, 16),
     clues: clues.map(({ replies, followUp, ...clue }, clueIndex) => ({
       ...clue,
-      opening: openingFor(catalogScene, catalogScene.clues[clueIndex]),
+      opening: clue.signal ? undefined : openingFor(catalogScene, catalogScene.clues[clueIndex]),
       replies: replies?.map((reply, index) => ({
         ...reply,
         acknowledgment: replyAcknowledgment(catalogScene, catalogScene.clues[clueIndex], reply),
@@ -131,10 +141,10 @@ export const world = scenes.map((catalogScene, index) => {
       followUp: followUp && { ...followUp, id: `${clue.id}-f`, promptAudioId: `${clue.id}-fe` },
       practice: practiceWords(clue.id),
     })),
-    questions: questions.map(({ prompt, options, phrase, pronunciation, glosses }, questionIndex) => ({
+    questions: questions.map(({ prompt, options, phrase, pronunciation, glosses, signal }, questionIndex) => ({
       prompt, options, phrase, pronunciation,
-      glosses,
-      audioId: phrase ? `${scene.id}-quiz-${questionIndex}` : undefined,
+      glosses, signal,
+      audioId: phrase && !signal ? `${scene.id}-quiz-${questionIndex}` : undefined,
     })),
   };
 });

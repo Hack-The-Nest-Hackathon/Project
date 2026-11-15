@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Clue, Scene } from "../../lib/api/world";
 import type { Character } from "../../lib/character";
 import CharacterSprite from "../../components/character-sprite";
+import SignalPerformance from "./signal-performance";
 import ObservationBeat from "./observation-beat";
 import FieldTerrain from "./field-terrain";
 import RocketLanding from "./rocket-landing";
@@ -40,6 +41,9 @@ const keys: Record<string, Direction> = {
   arrowup: "up", w: "up", arrowdown: "down", s: "down",
 };
 const introductions: Record<string, string> = {
+  Tikk: "Tikk uses clicks and chimes to signal from the lantern station.",
+  Mova: "Mova directs couriers with gestures you can watch from the trail.",
+  Vey: "Vey carves messages into a stone tablet.",
   Merchant: "The merchant shows you the same fruit in two different quantities. Listen for the word that changes.",
   Baker: "The baker compares one loaf with a group of loaves. Listen for the number.",
   Quartermaster: "The quartermaster loads two kinds of cargo. Listen for what changes when she switches items.",
@@ -217,6 +221,7 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
 
   function observe(clue: Clue) {
     setDialogue(clue);
+    if (clue.signal) { onStopAudio(); return; }
     if (clue.opening) onPlayAudio(`${clue.id}-hello`);
     else onListen(clue);
   }
@@ -457,7 +462,23 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
               onStopAudio(); setSpeaker(null); setDialogue(null);
             }}>Leave</button>
           </div>}
-          {dialogue ? (
+          {dialogue?.signal ? (
+            <section key={dialogue.id} className="signal-encounter" aria-label={dialogue.speaker}>
+              <div className="observation-heading">
+                <h2>{dialogue.speaker}</h2>
+                <button type="button" className="conversation-link" onClick={() => { setSpeaker(null); setDialogue(null); }}>Leave</button>
+              </div>
+              <p className="conversation-context">{dialogue.context}</p>
+              <SignalPerformance signal={dialogue.signal} onComplete={() => onListen(dialogue)} />
+              <button type="button" className="game-button primary" disabled={!observed.includes(dialogue.id)}
+                onClick={() => {
+                  if (nextObservation) observe(nextObservation);
+                  else { setSpeaker(null); setDialogue(null); }
+                }}>
+                {nextObservation ? "See the next clue" : "Finish encounter"} <PixelIcon name="right" />
+              </button>
+            </section>
+          ) : dialogue ? (
             <ObservationBeat key={dialogue.id} clue={dialogue} reducedMotion={reducedMotion}
               languageName={scene.language} sceneId={scene.id} canSpeak={canSpeak}
               disableSpeaking={disableSpeaking} stopAudio={onStopAudio}
@@ -474,7 +495,7 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
           ) : <p className="field-label">{introductions[speaker] ?? "Watch what the local does, then listen for the words that match."}</p>}
           {!dialogue && startObservation && <div className="reply-actions">
             <button type="button" className="game-button primary" disabled={busy}
-              onClick={() => observe(startObservation)}><PixelIcon name="chat" /> Start talking</button>
+              onClick={() => observe(startObservation)}><PixelIcon name={startObservation.signal ? "eye" : "chat"} /> {startObservation.signal ? "Observe signal" : "Start talking"}</button>
           </div>}
         </motion.div>
       )}

@@ -34,7 +34,7 @@ export default function MapMenu({
             <AnimatePresence mode="wait" initial={false}>
               <motion.div key={target.id} initial={reducedMotion ? false : { opacity: 0, scale: .94 }}
                 animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: reducedMotion ? 0 : .2 }}>
-                <span className="destination-sprite" style={{ backgroundImage: `url(/worlds/${encodeURIComponent(target.id)}.png)` }} aria-hidden="true" />
+                <span className="destination-sprite" data-world={target.id} style={target.id === "echo-basin" ? undefined : { backgroundImage: `url(/worlds/${encodeURIComponent(target.id)}.png)` }} aria-hidden="true" />
                 <h2>{target.title}</h2>
                 <p>{targetLocked ? `Requires ${target.requiredBadges} badges` :
                   target.mission ? `${target.language} · Difficulty ${target.mission.difficulty}/27` : target.language}</p>

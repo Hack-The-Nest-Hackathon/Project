@@ -40,7 +40,7 @@ export default {
       const spoken = normalize(transcript);
       const matches = ({ phrase }: { phrase: string }) =>
         Boolean(spoken && spoken === normalize(phrase));
-      const match = target ? (matches(target) ? target : undefined) : scene.clues.find(matches);
+      const match = target ? (matches(target) ? target : undefined) : scene.clues.find((clue) => !clue.signal && matches(clue));
       return { transcript, recognized: match ? { phrase: match.phrase, context: "context" in match ? match.context : "Practice reply" } : null };
     } catch (error) {
       const status = error instanceof SpeechError ? error.status : 502;

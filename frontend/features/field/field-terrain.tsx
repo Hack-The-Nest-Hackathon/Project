@@ -3,6 +3,7 @@ import { fieldRegion, landmarks, landingSpot, trailDistanceSquared, trailLimit, 
 import type { Scene } from "../../lib/api/world";
 
 const palettes = {
+  basin: { trail: "#a49472", rim: "#52504d", dark: "#2b293a", mid: "#6c6579", light: "#8cdbce", prop: "relay" },
   market: { trail: "#b5896e", rim: "#674850", dark: "#362842", mid: "#846056", light: "#fac480", prop: "awning" },
   outpost: { trail: "#848298", rim: "#463e60", dark: "#292741", mid: "#575574", light: "#9ef2cf", prop: "relay" },
   harbor: { trail: "#6d9b99", rim: "#254854", dark: "#172f4d", mid: "#317587", light: "#8ddecc", prop: "reeds" },

@@ -1,3 +1,4 @@
+import SignalPerformance from "./signal-performance";
 import SentenceWords, { sentenceTokens } from "./sentence-words";
 import clsx from "clsx";
 import { motion } from "framer-motion";
@@ -49,6 +50,7 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
   const voiceTimeout = useRef<number | undefined>(undefined);
   const getVoice = useCallback((id: string) => player.current?.dataset.line === id ? player.current : null, []);
   const question = scene.questions?.[testChoices.length];
+  const hasSpokenClues = scene.clues.some((clue) => !clue.signal);
   const observed = scene.clues.filter(({ id }) => progress.observed.includes(id));
   const shipReady = observed.length === scene.clues.length && scene.questions.length > 0;
   const onTutorialWalk = useCallback(() => setTutorial((step) => step === 0 ? 1 : step), []);
@@ -148,7 +150,7 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
   function listen(clue: Clue) {
     setTutorial((step) => step === 1 ? 2 : step);
     if (!progress.observed.includes(clue.id)) save({ ...progress, observed: [...progress.observed, clue.id] });
-    playSentence(clue.id);
+    if (!clue.signal) playSentence(clue.id);
   }
 
   function playSentence(id: string) {
@@ -327,7 +329,9 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
           </header>
           <p className="field-label">{scene.title} · {scene.language}</p>
           {scene.mission && <p className="field-label mt-2">Grammar · {scene.mission.grammar}</p>}
-          <p className="mt-2 text-sm">Collect sentences from each local. Tap a highlighted word to see its meaning at its first appearance. Tap any word to hear the full line again.</p>
+          <p className="mt-2 text-sm">{hasSpokenClues
+            ? "Collect sentences from each local. Tap a highlighted word to see its meaning at its first appearance. Tap any word to hear the full line again."
+            : "Replay the Basin signals and compare each one with what happened at the station."}</p>
           <p className="journal-audio-status" role="status">{audioMessage}</p>
           <div className="clue-meter" role="progressbar" aria-label="Clues collected"
             aria-valuenow={observed.length} aria-valuemax={scene.clues.length}>
@@ -337,7 +341,7 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
               }} transition={{ duration: reducedMotion ? 0 : 0.25 }} />
             ))}
           </div>
-          {observed.length === 0 && <p className="mt-3 text-[#bdc9d6]">Talk to a local to collect your first clue.</p>}
+          {observed.length === 0 && <p className="mt-3 text-[#bdc9d6]">Visit a local to collect your first clue.</p>}
           {vocabulary.size > 0 && <details className="journal-vocabulary">
             <summary>Vocabulary collected ({vocabulary.size})</summary>
             <dl>
@@ -357,18 +361,18 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
                 <div>
                   <p className="field-label">{clue.speaker}</p>
                   <p className="story-beat"><span>What happens</span>{clue.context}</p>
-                  <SentenceWords phrase={clue.phrase} glosses={clue.glosses} newWords={newWordsByClue.get(clue.id)}
-                    onPick={(term) => { setWord(term); setMeaning(hypotheses[term] ?? ""); playSentence(clue.id); }} />
+                  {clue.signal ? <SignalPerformance signal={clue.signal} /> : <SentenceWords phrase={clue.phrase} glosses={clue.glosses} newWords={newWordsByClue.get(clue.id)}
+                    onPick={(term) => { setWord(term); setMeaning(hypotheses[term] ?? ""); playSentence(clue.id); }} />}
                   {clue.pronunciation && <p className="field-label">/{clue.pronunciation}/</p>}
                 </div>
-                <button className="game-button" disabled={busy} onClick={() => replay(clue)}
+                {!clue.signal && <button className="game-button" disabled={busy} onClick={() => replay(clue)}
                   aria-label={`${playingClue === clue.id ? "Stop" : "Replay"}: ${clue.phrase}`}>
                   <PixelIcon name="sound" /> {playingClue === clue.id ? "Stop" : "Replay"}
-                </button>
+                </button>}
               </li>
             ))}
           </ul>
-          {observed.length > 0 && (
+          {observed.some((clue) => !clue.signal) && (
             <form className="decoding-notes" onSubmit={(event) => {
               event.preventDefault();
               if (word && meaning.trim()) setHypotheses((previous) => ({ ...previous, [word]: meaning.trim() }));
@@ -391,7 +395,7 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
           {shipReady && <p className="field-label mt-4">All clues collected. Meet the survey pilot to take your translation check.</p>}
             <div className="answer-grid mt-4">
               <button className="game-button" disabled={busy} onClick={askHint}><PixelIcon name="hint" /> Ask for a hint</button>
-              <button className="game-button" disabled={busy} onClick={speak}><PixelIcon name="mic" /> Speak a phrase</button>
+              {hasSpokenClues && <button className="game-button" disabled={busy} onClick={speak}><PixelIcon name="mic" /> Speak a phrase</button>}
             </div>
             <div role="status" className="feedback">
               {message && <motion.p key={message} initial={reducedMotion ? false : { opacity: 0, y: 5 }}
@@ -444,6 +448,7 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
                                 </span>
                               </summary>
                               <h4>{item.prompt}</h4>
+                              {item.signal && <SignalPerformance signal={item.signal} />}
                               {item.phrase && <p className="spoken-phrase">{item.phrase}</p>}
                               <dl>
                                 <div><dt>{missed ? "Your answer" : "Your correct answer"}</dt><dd>{item.options[selected]}</dd></div>
@@ -476,6 +481,7 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
                 <p className="field-label">Question {testChoices.length + 1} of {scene.questions.length}</p>
                 <h3 className="quiz-question">{question.prompt}</h3>
                 <div className="quiz-transmission">
+                {question.signal && <SignalPerformance signal={question.signal} />}
                 {question.phrase && <SentenceWords phrase={question.phrase}
                   glosses={question.glosses?.map((gloss) => gloss ?? undefined)}
                   newWords={new Set(questionTokens.map(({ word }) => word)
