@@ -43,8 +43,13 @@ function nextKey() {
   throw new SpeechError(503, "Speech credentials are unavailable");
 }
 
-async function requestSpeech(send: (key: string) => Promise<Response>) {
-  for (let attempt = 0; attempt < 2; attempt++) {
+export async function requestSpeech(
+  send: (key: string) => Promise<Response>,
+  { rotateOnLimit = false } = {},
+) {
+  const attempts = rotateOnLimit ? keys.length : 2;
+  let limited = false;
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const key = nextKey();
     const response = await send(key.secret);
     if (response.ok) return response;
@@ -56,6 +61,10 @@ async function requestSpeech(send: (key: string) => Promise<Response>) {
       continue;
     }
     if (response.status === 429 || code === "quota_exceeded") {
+      if (rotateOnLimit) {
+        limited = true;
+        continue;
+      }
       const seconds = Number(response.headers.get("retry-after"));
       const cooldown = code === "quota_exceeded" ? 60_000 : Math.max(2, seconds || 0) * 1000;
       retryAfter = Math.max(retryAfter, Date.now() + cooldown);
@@ -63,6 +72,7 @@ async function requestSpeech(send: (key: string) => Promise<Response>) {
     }
     throw new SpeechError(502, "Speech provider rejected the request");
   }
+  if (limited) throw new SpeechError(503, "Music provider is temporarily unavailable");
   throw new SpeechError(503, "Speech credentials are unavailable");
 }
 

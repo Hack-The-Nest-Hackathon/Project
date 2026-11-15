@@ -2,16 +2,19 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Field Notes",
-    short_name: "Field Notes",
+    id: "/",
+    name: "Voices beyond Stars",
+    short_name: "Voices",
+    description: "Explore distant worlds and decipher their languages.",
     start_url: "/",
+    scope: "/",
     display: "standalone",
     background_color: "#100e21",
     theme_color: "#100e21",
     icons: [
-      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/icon-voices-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icon-voices-512.png", sizes: "512x512", type: "image/png" },
+      { src: "/icon-voices-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

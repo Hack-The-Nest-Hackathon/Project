@@ -20,10 +20,14 @@ export default function CharacterSprite({ character }: { character: Character })
       <path className="sprite-foot sprite-foot-left" fill="#191225" d="M7 21h4v4h1v1H6v-1h1z" />
       <path className="sprite-foot sprite-foot-right" fill="#191225" d="M13 21h4v4h1v1h-6v-1h1z" />
       <path fill={suits[character.suit]} d="M8 14h8v2h3v5h-3v2h-3v-2h-2v2H8v-2H5v-5h3z" />
+      <path fill="#fff1dc" opacity=".38" d="M8 14h8v1H8zM5 16h2v2H5zM17 16h2v2h-2z" />
+      <path fill="#191225" opacity=".36" d="M8 20h8v1H8zM9 22h2v1H9zM13 22h2v1h-2z" />
+      <path fill="#231b37" d="M10 15h4v4h-4z" />
       <path fill="#f4d59f" d="M11 16h2v2h-2z" />
       <path fill={skin[character.skin]} d="M8 4h8v2h2v6h-2v2H8v-2H6V6h2zM5 19h2v2H5zM17 19h2v2h-2z" />
       <path fill={hairColors[character.hairColor]} d={hair[character.hair]} />
       <path fill="#241929" d="M8 9h1v2H8zM15 9h1v2h-1zM11 12h2v1h-2z" />
+      <path fill="#a04e57" opacity=".45" d="M7 11h2v1H7zM15 11h2v1h-2z" />
       {accessory === 1 && <path fill="#f2c57e" d="M6 8h5v1h2V8h5v4h-5v-2h-2v2H6z" />}
       {accessory === 2 && <path fill="#9ee8ee" d="M17 5h2v7h-2v2h-4v-1h3v-3h1z" />}
       {accessory === 3 && <path fill="#ffe3a3" d="M16 4h1v2h2v1h-2v2h-1V7h-2V6h2z" />}

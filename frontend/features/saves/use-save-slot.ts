@@ -5,6 +5,17 @@ const emptySave: Progress = { planet: "market", observed: [], badges: [] };
 const storagePrefix = "field-notes-progress-v1";
 const activeSlotKey = "field-notes-active-slot";
 
+function createSaveKey() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+
+  // HTTP on a LAN address still supports getRandomValues. Keep the UUID v4 format the API expects.
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 export function useSaveSlot() {
   const [slot, setSlot] = useState(1);
   const [savedSlots, setSavedSlots] = useState<Partial<Record<number, Progress>>>({});
@@ -38,7 +49,7 @@ export function useSaveSlot() {
       }
 
       try {
-        saveKey.current ||= localStorage.getItem("field-notes-player") ?? crypto.randomUUID();
+        saveKey.current ||= localStorage.getItem("field-notes-player") ?? createSaveKey();
         localStorage.setItem("field-notes-player", saveKey.current);
         await queuedSave.current;
         controller.signal.throwIfAborted();

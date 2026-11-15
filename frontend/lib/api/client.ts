@@ -19,9 +19,11 @@ export async function request<T>(
     signal: options.signal ? AbortSignal.any([options.signal, deadline]) : deadline,
   });
   if (!response.ok) {
-    throw new ApiError(response.status, response.status >= 500
+    const body = await response.json().catch(() => null);
+    const reason = typeof body?.message === "string" ? body.message : null;
+    throw new ApiError(response.status, reason ?? (response.status >= 500
       ? "The game server is unavailable."
-      : "The game server rejected the request.");
+      : "The game server rejected the request."));
   }
   return response.status === 204 ? undefined as T : response.json();
 }

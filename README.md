@@ -1,4 +1,4 @@
-# Field Notes
+# Voices beyond Stars
 
 Talk to locals, collect language clues in a journal, and use what you learn to open the gate.
 
@@ -11,7 +11,9 @@ npm run dev -w backend
 npm run dev -w frontend
 ```
 
-Open [localhost:3000](http://localhost:3000). The frontend proxies API requests to Fastify on port 3001. Set BACKEND_URL in frontend/.env.local before building for another backend host.
+Open [localhost:3000](http://localhost:3000), or open `http://<your-computer-ip>:3000` from a device on the same network. Use the IP of the Wi-Fi or Ethernet adapter connected to that network. The browser uses the same origin for game assets and API requests. Next.js proxies `/api/*` to Fastify on port 3001, so only the frontend port needs to be reachable by other devices. Set `BACKEND_URL` in `frontend/.env.local` before building if Fastify runs elsewhere.
+
+Localhost and the LAN IP are separate browser origins. Each keeps its own save slots in browser storage. Use HTTPS for microphone access and PWA installation from a LAN address.
 
 Copy backend/.env.example to backend/.env. Set ELEVENLABS_API_KEYS to a JSON array of TTS-enabled API keys and ELEVENLABS_VOICE_ID to a voice each key can use. New clips rotate through the keys. Replays use the process-local cache. Set ELEVENLABS_CONCURRENCY within the workspace limit. With no credentials, players can use transcripts.
 

@@ -7,6 +7,7 @@
     "build": "tsc && node database/copy-sql.mjs",
     "start": "node --env-file-if-exists=.env dist/src/index.js",
     "db:init": "tsx --env-file-if-exists=.env database/init.ts",
+    "music:generate": "tsx --env-file-if-exists=.env src/generate-music.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {"fastify": "^5.8.0", "@fastify/rate-limit": "^10.3.0", "@types/pg": "^8.15.0", "pg": "^8.16.0"},

@@ -5,7 +5,9 @@ export async function recordPhrase(
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   try {
     signal.throwIfAborted();
-    const recorder = new MediaRecorder(stream);
+    const mimeType = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"]
+      .find((type) => MediaRecorder.isTypeSupported(type));
+    const recorder = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), audioBitsPerSecond: 48_000 });
     const chunks: Blob[] = [];
     const audio = await new Promise<Blob>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -29,7 +31,8 @@ export async function recordPhrase(
       };
       recorder.onstop = () => {
         cleanup();
-        resolve(new Blob(chunks, { type: recorder.mimeType.split(";")[0] }));
+        const format = (chunks[0]?.type || recorder.mimeType || mimeType || "").split(";")[0].toLowerCase();
+        resolve(new Blob(chunks, { type: format }));
       };
       recorder.onerror = () => {
         cleanup();

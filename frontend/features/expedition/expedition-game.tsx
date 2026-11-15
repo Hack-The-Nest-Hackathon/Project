@@ -5,12 +5,15 @@ import { useEffect, useRef, useState } from "react";
 import PixelIcon from "../../components/pixel-icon";
 import { defaultCharacter } from "../../lib/character";
 import { getWorld, type Scene } from "../../lib/api/world";
+import { getPlanetMusicUrl } from "../../lib/api/speech";
 import FieldScene from "../field/field-scene";
 import MapMenu from "../map/map-menu";
 import CharacterEditor from "../profile/character-editor";
 import SaveMenu from "../saves/save-menu";
 import { useSaveSlot } from "../saves/use-save-slot";
 import TitleMenu from "../title/title-menu";
+import InstallPrompt from "../title/install-prompt";
+import { useGameMusic } from "./use-game-music";
 
 export default function ExpeditionGame() {
   const [screen, setScreen] = useState<"title" | "slots" | "profile" | "map" | "field">("title");
@@ -33,6 +36,16 @@ export default function ExpeditionGame() {
   const [attempt, setAttempt] = useState(0);
   const screenRef = useRef<HTMLElement>(null);
   const scene = world.find(({ id }) => id === progress.planet);
+  const music = useGameMusic(screen === "field" && scene ? getPlanetMusicUrl(scene.id)
+    : screen === "map" ? "/map-theme.wav" : "/menu-theme.wav");
+  const musicControl = (
+    <div className="game-music-control">
+      <button className="game-button" onClick={music.toggle} aria-pressed={music.state === "playing"}>
+        <PixelIcon name="sound" /> {music.state === "loading" ? "Cancel music" : music.state === "playing" ? "Music on" : "Music"}
+      </button>
+      {music.state === "error" && <p className="field-label" role="status">Soundtrack unavailable. Tap Music to retry.</p>}
+    </div>
+  );
 
   function focusScreen(animation: unknown) {
     if (animation !== "enter") return;
@@ -74,6 +87,7 @@ export default function ExpeditionGame() {
 
   return (
     <main ref={screenRef} className="game-shell">
+      {screen !== "field" && <div className="menu-music-control">{musicControl}</div>}
       <AnimatePresence mode="wait" initial={false}>
         {screen === "title" && (
           <motion.section key="title" {...screenMotion} onAnimationComplete={focusScreen} className="title-scene" aria-labelledby="game-title">
@@ -108,10 +122,11 @@ export default function ExpeditionGame() {
         {screen === "field" && progress.character && scene && !slotLoading && (
           <motion.div key={scene.id} {...screenMotion} className="field-game" onAnimationComplete={focusScreen}>
             <FieldScene scene={scene} character={progress.character} progress={progress} saveStatus={saveStatus}
-              reducedMotion={reducedMotion} save={save} openMap={openMap} />
+              reducedMotion={reducedMotion} save={save} openMap={openMap} musicControl={musicControl} duckMusic={music.duck} />
           </motion.div>
         )}
       </AnimatePresence>
+      <InstallPrompt visible={screen === "title"} reducedMotion={reducedMotion} />
     </main>
   );
 }

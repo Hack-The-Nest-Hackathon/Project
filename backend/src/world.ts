@@ -1,7 +1,7 @@
 type Observation = { label: string; prop: "apple" | "bread" | "lantern" | "marker"; count: number; action: "show" | "load" | "carry" | "see" };
 import { evolveLanguages } from "./evolution.js";
 
-type Clue = { id: string; speaker: string; context: string; phrase: string; speech: string; pronunciation?: string; translation?: string; glosses?: string[]; observation?: Observation };
+type Clue = { id: string; speaker: string; context: string; phrase: string; speech: string; pronunciation?: string; translation?: string; glosses?: string[]; roles?: string[]; observation?: Observation };
 type Question = {
   prompt: string; options: string[]; answer: number; phrase?: string; pronunciation?: string;
   speech?: string; glosses?: string[];
@@ -16,7 +16,8 @@ const frenchGlosses: Record<string, string> = {
 
 function french(id: string, speaker: string, context: string, phrase: string, translation: string, observation: Observation): Clue {
   const glosses = phrase.toLowerCase().match(/\p{L}+/gu)?.map((word) => frenchGlosses[word]);
-  return { id, speaker, context, phrase, speech: phrase, translation, glosses, observation };
+  const roles = observation.action === "load" ? ["Subject", "Action", "Article", "Object"] : ["Points out", "Quantity", "Object"];
+  return { id, speaker, context, phrase, speech: phrase, translation, glosses, roles, observation };
 }
 
 const market: Scene = {
@@ -101,11 +102,19 @@ function alienScene(id: string, title: string, language: string, roots: string[]
   const oneStar = noun(star, "star marker");
   const manyStars = noun(star, "star marker", true);
   const clue = (key: string, speaker: string, context: string, words: Word[], translation: string, observation: Observation): Clue => ({
-    id: id === "outpost" ? key : `${id}-${key}`, speaker, context, translation, observation, ...render(words, dialect),
+    id: id === "outpost" ? key : `${id}-${key}`, speaker, context, translation, observation,
+    roles: words.map(({ meaning }) => meaning === "the scout" ? "Subject"
+      : ["shows", "carries", "sees"].includes(meaning) ? "Action"
+        : meaning === "several" ? "Quantity" : "Object"),
+    ...render(words, dialect),
   });
   return {
     id, title, language, dialect: dialect.name,
-    description: "A storm is coming. Compare what locals say with what they do, then decode a new supply order.",
+    description: [
+      "A coastal resupply crew needs the cargo manifest checked before the tide turns.",
+      "A highland lookout is preparing the signal lamps before a storm reaches the pass.",
+      "A desert survey team is marking a safe route before the wind buries its trail.",
+    ][dialects.indexOf(dialect)],
     clues: [
       clue("lantern-one", "Lamplighter", "The Lamplighter points as the scout raises one lantern.", clause(shows, oneLantern), "The scout shows a lantern.", { label: "One lantern", prop: "lantern", count: 1, action: "show" }),
       clue("lantern-many", "Lamplighter", "This time the scout raises several lanterns.", clause(shows, manyLanterns), "The scout shows several lanterns.", { label: "Several lanterns", prop: "lantern", count: 3, action: "show" }),
@@ -126,10 +135,9 @@ function alienScene(id: string, title: string, language: string, roots: string[]
   };
 }
 
-const generated = evolveLanguages().map(({ roots, pluralize }, index) => {
-  const name = roots[2];
+const generated = evolveLanguages().map(({ roots, pluralize, family, placeName: name }, index) => {
   const scene = alienScene(`planet-${index + 1}`, name[0].toUpperCase() + name.slice(1), `${name.toUpperCase()} dialect`,
-    roots, pluralize, dialects[index % dialects.length]);
+    roots, pluralize, dialects[family]);
   scene.questions = scene.questions.map((question, position) => {
     const size = question.options.length;
     const offset = (index + position) % size;

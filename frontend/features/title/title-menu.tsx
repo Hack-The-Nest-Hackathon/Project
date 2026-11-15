@@ -28,7 +28,9 @@ export default function TitleMenu({ progress, slotLoading, reducedMotion, openMa
         <motion.h1 id="game-title" tabIndex={-1} className="pixel-title"
           initial={reducedMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }}>
-          FIELD <span>NOTES</span>
+          <span className="title-voices">Voices</span>{" "}
+          <span className="title-beyond">beyond</span>{" "}
+          <span className="title-stars">Stars</span>
         </motion.h1>
         <motion.p className="title-description"
           initial={reducedMotion ? false : { opacity: 0, y: 6 }}

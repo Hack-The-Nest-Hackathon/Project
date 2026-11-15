@@ -21,7 +21,8 @@ export default {
         scene.questions.some(({ options }, index) => choices[index] >= options.length)) {
       return reply.code(400).send({ message: "Submit one valid choice for every question" });
     }
-    const score = scene.questions.filter(({ answer }, index) => choices[index] === answer).length;
-    return { correct: score === scene.questions.length, score, total: scene.questions.length };
+    const missed = scene.questions.flatMap(({ answer }, index) =>
+      choices[index] === answer ? [] : [{ index, selected: choices[index], answer }]);
+    return { correct: !missed.length, score: scene.questions.length - missed.length, total: scene.questions.length, missed };
   },
 };

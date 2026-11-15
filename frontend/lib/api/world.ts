@@ -3,6 +3,7 @@ import { request } from "./client";
 export type Clue = {
   id: string; speaker: string; context: string; phrase: string; pronunciation?: string;
   translation?: string; glosses?: string[];
+  roles?: string[];
   observation?: { label: string; prop: "apple" | "bread" | "lantern" | "marker"; count: number; action: "show" | "load" | "carry" | "see" };
 };
 export type Scene = {
@@ -24,6 +25,11 @@ export function getHint(sceneId: string, observedClueIds: string[], signal: Abor
   });
 }
 
+export type QuizResult = {
+  correct: boolean; score: number; total: number;
+  missed: { index: number; selected: number; answer: number }[];
+};
+
 export function submitAnswer(sceneId: string, choices: number[], signal: AbortSignal) {
-  return request<{ correct: boolean; score: number; total: number }>("answer", { method: "POST", json: { sceneId, choices }, signal });
+  return request<QuizResult>("answer", { method: "POST", json: { sceneId, choices }, signal });
 }

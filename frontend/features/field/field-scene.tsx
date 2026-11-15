@@ -1,27 +1,34 @@
 import SentenceWords, { sentenceTokens } from "./sentence-words";
 import clsx from "clsx";
 import { motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import PixelIcon from "../../components/pixel-icon";
 import type { Character } from "../../lib/character";
 import type { Progress } from "../../lib/api/saves";
 import { ApiError } from "../../lib/api/client";
-import { getHint, submitAnswer, type Clue, type Scene } from "../../lib/api/world";
+import { getHint, submitAnswer, type Clue, type QuizResult, type Scene } from "../../lib/api/world";
 import { getAudioUrl, recognizeSpeech } from "../../lib/api/speech";
 import FieldWalk from "./field-walk";
+import RocketDeparture from "./rocket-departure";
 import { recordPhrase } from "./record-phrase";
 
-export default function FieldScene({ scene, character, progress, saveStatus, reducedMotion, save, openMap }: {
+export default function FieldScene({ scene, character, progress, saveStatus, reducedMotion, save, openMap, musicControl, duckMusic }: {
   scene: Scene; character: Character; progress: Progress; saveStatus: string; reducedMotion: boolean | null;
-  save: (progress: Progress) => void; openMap: () => void;
+  save: (progress: Progress) => void; openMap: () => void; musicControl: ReactNode; duckMusic: (quiet: boolean) => void;
 }) {
   const journal = useRef<HTMLDialogElement>(null);
+  const quiz = useRef<HTMLDialogElement>(null);
+  const locationHeading = useRef<HTMLHeadingElement>(null);
+  const [quizOpen, setQuizOpen] = useState(false);
+  const [departing, setDeparting] = useState(false);
+  const [landing, setLanding] = useState(true);
   const [journalOpen, setJournalOpen] = useState(false);
   const [word, setWord] = useState("");
   const [meaning, setMeaning] = useState("");
   const [hypotheses, setHypotheses] = useState<Record<string, string>>({});
   const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
-  const [result, setResult] = useState<{ score: number; total: number; correct: boolean } | null>(null);
+  const [result, setResult] = useState<(QuizResult & { choices: number[] }) | null>(null);
+  const [reviewAll, setReviewAll] = useState(false);
   const [testChoices, setTestChoices] = useState<number[]>([]);
   const [message, setMessage] = useState("");
   const [audioMessage, setAudioMessage] = useState("");
@@ -31,6 +38,16 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
   const player = useRef<HTMLAudioElement | null>(null);
   const question = scene.questions?.[testChoices.length];
   const observed = scene.clues.filter(({ id }) => progress.observed.includes(id));
+  const shipReady = observed.length === scene.clues.length && scene.questions.length > 0;
+
+  function boardShip() {
+    if (!shipReady || !quiz.current || quiz.current.open) return;
+    stopAudio();
+    setAudioMessage("");
+    setMessage("");
+    quiz.current.showModal();
+    setQuizOpen(true);
+  }
   const newWordsByClue = new Map<string, ReadonlySet<string>>();
   const seenWords = new Set<string>();
   const observedById = new Map(observed.map((clue) => [clue.id, clue]));
@@ -53,6 +70,22 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
     player.current?.pause();
     player.current = null;
   }, []);
+
+  useEffect(() => {
+    duckMusic(Boolean(playingClue || busy));
+    return () => duckMusic(false);
+  }, [playingClue, busy, duckMusic]);
+
+  useEffect(() => {
+    if (!landing) locationHeading.current?.focus({ preventScroll: true });
+  }, [landing]);
+
+  function launchRocket() {
+    if (!result?.correct || departing) return;
+    quiz.current?.close();
+    stopAudio();
+    setDeparting(true);
+  }
 
   function stopAudio() {
     player.current?.pause();
@@ -109,7 +142,8 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
       const result = await submitAnswer(scene.id, choices, signal);
       signal.throwIfAborted();
       setSelectedChoice(null);
-      setResult(result);
+      setResult({ ...result, choices });
+      setReviewAll(result.correct);
       setTestChoices([]);
       if (result.correct) {
         stopAudio();
@@ -117,12 +151,16 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
         setAudioMessage("");
         setMessage(`${result.score}/${result.total}. Badge earned. Choose an unlocked planet to continue.`);
       } else {
-        setMessage(`${result.score}/${result.total}. Review your journal and try the check again.`);
+        setMessage("Review the missed answers below before trying again.");
       }
     }, "Checking answers requires a connection to the game server.");
   }
 
   async function speak() {
+    if (!window.isSecureContext) {
+      setMessage("Microphone access needs HTTPS or localhost. You can still read the clues here.");
+      return;
+    }
     await runAction(async (signal) => {
       stopAudio();
       setMessage("Allow microphone access to start.");
@@ -137,10 +175,31 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
         : result.transcript
           ? `Heard "${result.transcript}". The guide didn't recognize that phrase.`
           : "No speech was recognized. Try again.");
-    }, "Speech input unavailable. Check microphone access and try again.");
+    }, "Speech input unavailable. Check microphone access and try again.", true);
   }
 
-  async function runAction(work: (signal: AbortSignal) => Promise<void>, fallback: string) {
+  async function speakReply(clue: Clue, report: (status: string, understood?: boolean) => void) {
+    if (!window.isSecureContext) {
+      report("Microphone access needs HTTPS or localhost. You can build your reply with the words below.");
+      return;
+    }
+    await runAction(async (signal) => {
+      stopAudio();
+      report("Allow microphone access to start.");
+      const { audio, mime } = await recordPhrase(signal, () => report("Listening. Say the full sentence."));
+      report("Checking your reply…");
+      const response = await recognizeSpeech(scene.id, audio, mime, signal);
+      signal.throwIfAborted();
+      if (response.recognized?.phrase === clue.phrase) {
+        report("Reply understood.", true);
+      } else {
+        report(response.transcript ? `Heard “${response.transcript}.” Try the full sentence again.` : "No speech was recognized. Try again.");
+      }
+    }, "Speech input unavailable. Check microphone access and try again.", true, report);
+  }
+
+  async function runAction(work: (signal: AbortSignal) => Promise<void>, fallback: string, explainServerError = false,
+    reportError: (message: string) => void = setMessage) {
     if (action.current) return;
     const controller = new AbortController();
     action.current = controller;
@@ -149,7 +208,7 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
       await work(controller.signal);
     } catch (error) {
       if (!controller.signal.aborted) {
-        setMessage(error instanceof ApiError && error.status < 500 ? error.message : fallback);
+        reportError(error instanceof ApiError && (explainServerError || error.status < 500) ? error.message : fallback);
       }
     } finally {
       action.current = null;
@@ -165,7 +224,7 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
 
   useEffect(() => {
     function toggleJournal(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== "j" || event.repeat || event.ctrlKey || event.metaKey || event.altKey
+      if (event.key.toLowerCase() !== "j" || landing || departing || quiz.current?.open || event.repeat || event.ctrlKey || event.metaKey || event.altKey
         || (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, [contenteditable]"))) return;
       const panel = journal.current;
       if (!panel) return;
@@ -174,7 +233,7 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
     }
     window.addEventListener("keydown", toggleJournal);
     return () => window.removeEventListener("keydown", toggleJournal);
-  }, []);
+  }, [departing, landing]);
 
   function replay(clue: Clue) {
     if (playingClue === clue.id) stopAudio();
@@ -183,18 +242,23 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
 
   return (
     <>
-      <header className="field-hud">
+      <header className="field-hud" inert={landing}>
         <button className="game-button" disabled={busy} onClick={leaveField}><PixelIcon name="back" /> Star map</button>
         <div className="field-location">
-          <h1 tabIndex={-1}>{scene.title}</h1>
+          <h1 ref={locationHeading} tabIndex={-1}>{scene.title}</h1>
           <p className="field-label">{scene.language}{scene.dialect ? ` · ${scene.dialect}` : ""}</p>
         </div>
-        <button className="game-button" aria-haspopup="dialog" aria-controls="field-journal" onClick={openJournal}>
-          <PixelIcon name="journal" /> Journal <span className="field-label">{observed.length}/{scene.clues.length}</span>
-        </button>
+        <div className="field-hud-actions">
+          <button className="game-button" aria-haspopup="dialog" aria-controls="field-journal" onClick={openJournal}>
+            <PixelIcon name="journal" /> Journal <span className="field-label">{observed.length}/{scene.clues.length}</span>
+          </button>
+          {musicControl}
+        </div>
       </header>
-      <FieldWalk key={scene.id} scene={scene} character={character} observed={progress.observed} busy={busy} paused={journalOpen}
-        playingClue={playingClue} reducedMotion={reducedMotion} onListen={listen} newWordsByClue={newWordsByClue} />
+      <FieldWalk key={scene.id} scene={scene} character={character} observed={progress.observed} busy={busy} paused={journalOpen || quizOpen || departing}
+        playingClue={playingClue} reducedMotion={reducedMotion} onListen={listen} onStopAudio={stopAudio}
+        onSpeakReply={speakReply} newWordsByClue={newWordsByClue}
+        landing={landing} onLand={() => setLanding(false)} shipReady={shipReady} onBoard={boardShip} />
       <p className="field-audio-status" role="status">{audioMessage}</p>
       {saveStatus && <p className="field-save-status" role="status">{saveStatus}</p>}
       
@@ -255,21 +319,78 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
               </dl>}
             </form>
           )}
-          <div className="mt-6 border-t border-[#394866] pt-5">
-            <motion.p key={progress.badges.includes(scene.id) ? "earned" : "test"}
-              initial={reducedMotion ? false : { opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }} className={clsx("field-label mb-2",
-                progress.badges.includes(scene.id) && "earned-badge")}>
-              <PixelIcon name="badge" /> {progress.badges.includes(scene.id) ? "Badge earned" : "Competency test"}
-            </motion.p>
-            {observed.length < scene.clues.length ? (
-              <p className="mt-2 text-sm text-[#bdc9d6]">Gather all {scene.clues.length} observations to take the test.</p>
-            ) : result ? (
+          {shipReady && <p className="field-label mt-4">All clues collected. Meet the survey pilot to take your translation check.</p>}
+            <div className="answer-grid mt-4">
+              <button className="game-button" disabled={busy} onClick={askHint}><PixelIcon name="hint" /> Ask for a hint</button>
+              <button className="game-button" disabled={busy} onClick={speak}><PixelIcon name="mic" /> Speak a phrase</button>
+            </div>
+            <div role="status" className="feedback">
+              {message && <motion.p key={message} initial={reducedMotion ? false : { opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}>{message}</motion.p>}
+            </div>
+        </section>
+      </dialog>
+      <dialog ref={quiz} className="field-journal survey-quiz" aria-labelledby="survey-quiz-title"
+        onClose={() => { setQuizOpen(false); setMessage(""); }}>
+        <section className="field-journal-content quiz-content">
+          <header className="field-journal-header quiz-header">
+            <div>
+              <p className="field-label">Survey ship · {scene.title}</p>
+              <h2 id="survey-quiz-title" className="journal-heading">Translation check</h2>
+            </div>
+            <button className="game-button" disabled={busy} onClick={() => quiz.current?.close()}><PixelIcon name="back" /> Return to field</button>
+          </header>
+          <div className="quiz-body">
+            {progress.badges.includes(scene.id) && <p className="field-label quiz-badge"><PixelIcon name="badge" /> Badge earned</p>}
+            {result ? (
               <motion.div className={clsx("quiz-result", result.correct && "is-passed")}
                 initial={reducedMotion ? false : { opacity: 0, scale: .93 }} animate={{ opacity: 1, scale: 1 }}>
                 <strong>{result.score} / {result.total}</strong>
                 <p>{result.correct ? "Translation verified" : "Review your evidence and try again"}</p>
-                <button className="game-button" onClick={() => { setResult(null); setMessage(""); }}>Try another pass</button>
+                {Array.isArray(result.missed) && (
+                  <section className="quiz-review" aria-labelledby="quiz-review-title">
+                    <h3 id="quiz-review-title">Review your answers</h3>
+                    <div className="quiz-review-filters" role="group" aria-label="Filter answers">
+                      <button type="button" className="game-button" aria-pressed={!reviewAll}
+                        onClick={() => setReviewAll(false)}>Missed ({result.missed.length})</button>
+                      <button type="button" className="game-button" aria-pressed={reviewAll}
+                        onClick={() => setReviewAll(true)}>All ({result.total})</button>
+                    </div>
+                    {!reviewAll && !result.missed.length && <p>Every answer was correct.</p>}
+                    <ul>
+                      {scene.questions.map((item, index) => {
+                        const missed = result.missed.find((entry) => entry.index === index);
+                        if (!reviewAll && !missed) return null;
+                        const selected = result.choices[index];
+                        return (
+                          <motion.li key={index} className={clsx("quiz-review-card", missed ? "is-missed" : "is-correct")}
+                            initial={reducedMotion ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: reducedMotion ? 0 : .18 }}>
+                            <details open={Boolean(missed)}>
+                              <summary>
+                                <span>Question {index + 1}</span>
+                                <span className="quiz-review-status">
+                                  <PixelIcon name={missed ? "retry" : "check"} />{missed ? "Missed" : "Correct"}
+                                </span>
+                              </summary>
+                              <h4>{item.prompt}</h4>
+                              {item.phrase && <p className="spoken-phrase" lang={scene.id === "market" ? "fr" : undefined}>{item.phrase}</p>}
+                              <dl>
+                                <div><dt>{missed ? "Your answer" : "Your correct answer"}</dt><dd>{item.options[selected]}</dd></div>
+                                {missed && <div><dt>Correct answer</dt><dd>{item.options[missed.answer]}</dd></div>}
+                              </dl>
+                              {item.audioId && <button className="game-button" onClick={() => { if (item.audioId) playSentence(item.audioId); }}>
+                                <PixelIcon name="sound" /> Replay sentence
+                              </button>}
+                            </details>
+                          </motion.li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                )}
+                {result.correct ? <button className="game-button primary" onClick={launchRocket}><PixelIcon name="launch" /> Board and launch</button>
+                  : <button className="game-button" onClick={() => { setResult(null); setMessage(""); }}>Try another pass</button>}
               </motion.div>
             ) : question && (
               <motion.div key={testChoices.length} initial={reducedMotion ? false : { opacity: 0, y: 6 }}
@@ -280,39 +401,46 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
                     transition={{ duration: reducedMotion ? 0 : .22 }} />)}
                 </div>
                 <p className="field-label">Question {testChoices.length + 1} of {scene.questions.length} · {["Recognition", "Quantity", "Action", "New sentence"][testChoices.length]}</p>
-                <h3 className="mb-3 text-xl">{question.prompt}</h3>
+                <h3 className="quiz-question">{question.prompt}</h3>
+                <div className="quiz-transmission">
                 {question.phrase && <SentenceWords phrase={question.phrase} language={scene.id === "market" ? "fr" : undefined}
                   glosses={question.glosses?.map((gloss) => gloss ?? undefined)}
                   newWords={new Set(questionTokens.map(({ word }) => word)
                     .filter((word) => !seenWords.has(word) && !previousQuizWords.has(word)))}
                   onPick={() => { if (question.audioId) playSentence(question.audioId); }} />}
-                {question.pronunciation && <p className="field-label mb-3">/{question.pronunciation}/</p>}
-                {question.audioId && <button className="game-button mb-3" disabled={busy}
+                {question.pronunciation && <p className="field-label">/{question.pronunciation}/</p>}
+                {question.audioId && <button className="game-button quiz-listen" disabled={busy}
                   onClick={() => { if (question.audioId) playSentence(question.audioId); }}>
                   <PixelIcon name="sound" /> Play full sentence
                 </button>}
-                <div className="answer-grid test-options">
+                </div>
+                <div className="test-options quiz-options" role="group" aria-label="Translation choices">
                   {question.options.map((option, index) => (
                     <motion.button key={option} type="button" className={clsx("clue-button", selectedChoice === index && "is-selected")}
                       initial={reducedMotion ? false : { opacity: 0, x: 8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: reducedMotion ? 0 : .2, delay: reducedMotion ? 0 : index * .045 }}
                       aria-pressed={selectedChoice === index} whileTap={reducedMotion || busy ? undefined : { scale: .97 }}
-                      disabled={busy} onClick={() => setSelectedChoice(index)}><PixelIcon name="check" />{option}</motion.button>
+                      disabled={busy} onClick={() => setSelectedChoice(index)}>
+                      <span className="quiz-option-letter" aria-hidden="true">{String.fromCharCode(65 + index)}</span>
+                      <span>{option}</span>
+                      {selectedChoice === index && <PixelIcon name="check" />}
+                    </motion.button>
                   ))}
                 </div>
-                <button className="game-button primary mt-3" disabled={busy || selectedChoice === null}
-                  onClick={() => { if (selectedChoice !== null) void answer(selectedChoice); }}>
-                  {busy ? "Working…" : testChoices.length + 1 === scene.questions.length ? "Check translation" : "Confirm answer"}
-                </button>
-                {testChoices.length > 0 && <button className="game-button mt-3" disabled={busy}
-                  onClick={() => { setSelectedChoice(testChoices.at(-1) ?? null); setTestChoices((choices) => choices.slice(0, -1)); }}><PixelIcon name="back" /> Previous question</button>}
+                <div className="quiz-actions">
+                  {testChoices.length > 0 && <button className="game-button quiz-previous" disabled={busy}
+                    onClick={() => { setSelectedChoice(testChoices.at(-1) ?? null); setTestChoices((choices) => choices.slice(0, -1)); }}>
+                    <PixelIcon name="back" /> Previous question
+                  </button>}
+                  <button className="game-button primary quiz-confirm" disabled={busy || selectedChoice === null}
+                    onClick={() => { if (selectedChoice !== null) void answer(selectedChoice); }}>
+                    {busy ? "Working…" : testChoices.length + 1 === scene.questions.length ? "Check translation" : "Confirm answer"}
+                  </button>
+                </div>
               </motion.div>
             )}
-            <div className="answer-grid mt-4">
-              <button className="game-button" disabled={busy} onClick={askHint}><PixelIcon name="hint" /> Ask for a hint</button>
-              <button className="game-button" disabled={busy} onClick={speak}><PixelIcon name="mic" /> Speak a phrase</button>
-            </div>
+            <p className="journal-audio-status" role="status">{audioMessage}</p>
             <div role="status" className="feedback">
               {message && <motion.p key={message} initial={reducedMotion ? false : { opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}>{message}</motion.p>}
@@ -320,6 +448,7 @@ export default function FieldScene({ scene, character, progress, saveStatus, red
           </div>
         </section>
       </dialog>
+      {departing && <RocketDeparture character={character} planet={scene.title} reducedMotion={reducedMotion} onFinish={leaveField} />}
     </>
   );
 }

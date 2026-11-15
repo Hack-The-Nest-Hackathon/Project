@@ -2,10 +2,13 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Field Notes",
-  description: "A language exploration game",
-  appleWebApp: { capable: true, title: "Field Notes" },
-  icons: { apple: "/icon-192.png" },
+  title: "Voices beyond Stars",
+  applicationName: "Voices beyond Stars",
+  description: "Explore distant worlds and decipher their languages in a pixel-art adventure.",
+  appleWebApp: { capable: true, title: "Voices beyond Stars" },
+  icons: {
+    apple: { url: "/icon-voices-180.png", sizes: "180x180", type: "image/png" },
+  },
 };
 export const viewport: Viewport = { themeColor: "#100e21", viewportFit: "cover" };
 

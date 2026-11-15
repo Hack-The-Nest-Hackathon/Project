@@ -3,7 +3,12 @@ import { transcribe, SpeechError } from "../../speech.js";
 import { scenes } from "../../world.js";
 
 type Body = { sceneId: string; audio: string; mime: string };
-const mimeTypes = ["audio/webm", "audio/mp4", "audio/ogg", "audio/wav"];
+const mimeTypes = new Map([
+  ["audio/webm", "audio/webm"], ["video/webm", "audio/webm"],
+  ["audio/mp4", "audio/mp4"], ["video/mp4", "audio/mp4"], ["audio/x-m4a", "audio/mp4"],
+  ["audio/ogg", "audio/ogg"], ["application/ogg", "audio/ogg"],
+  ["audio/wav", "audio/wav"], ["audio/x-wav", "audio/wav"],
+]);
 
 export default {
   bodyLimit: 1_400_000,
@@ -14,18 +19,20 @@ export default {
       properties: {
         sceneId: { type: "string", maxLength: 40 },
         audio: { type: "string", minLength: 8, maxLength: 1_398_104, pattern: "^[A-Za-z0-9+/]+={0,2}$" },
-        mime: { type: "string", enum: mimeTypes },
+        mime: { type: "string", maxLength: 100 },
       },
     },
   },
   handler: async (request: FastifyRequest<{ Body: Body }>, reply: FastifyReply) => {
     const { sceneId, audio, mime } = request.body;
+    const format = mimeTypes.get(mime.split(";")[0].trim().toLowerCase());
+    if (!format) return reply.code(415).send({ message: "This recording format is unsupported. Try a browser that records WebM, Ogg or MP4 audio." });
     const scene = scenes.find(({ id }) => id === sceneId);
     if (!scene) return reply.code(404).send({ message: "Planet not found" });
     const bytes = Buffer.from(audio, "base64");
     if (bytes.length > 1_048_576) return reply.code(413).send({ message: "Recording is too large" });
     try {
-      const transcript = await transcribe(bytes, mime, "fr");
+      const transcript = await transcribe(bytes, format, "fr");
       const normalize = (value: string) => value.normalize("NFKD").toLowerCase().replace(/[^a-z]/g, "");
       const spoken = normalize(transcript);
       const match = spoken && scene.clues.find(({ phrase, speech }) =>
