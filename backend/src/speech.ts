@@ -1,4 +1,4 @@
-import { lines } from "./world.js";
+import { lines, quizLines } from "./world.js";
 
 let rawKeys: unknown;
 try {
@@ -81,7 +81,7 @@ async function synthesize(voiceId: string, line: { speech: string; language: str
 }
 
 export function getSpeech(lineId: string): Promise<Buffer> {
-  const line = lines.get(lineId);
+  const line = lines.get(lineId) ?? quizLines.get(lineId);
   if (!line) throw new SpeechError(404, "Line not found");
   const cacheKey = JSON.stringify([line.language, line.speech]);
   const cached = cache.get(cacheKey);

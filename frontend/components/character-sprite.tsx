@@ -16,7 +16,9 @@ export default function CharacterSprite({ character }: { character: Character })
   const { accessory } = character;
   return (
     <svg viewBox="0 0 24 28" shapeRendering="crispEdges" aria-hidden="true" className="character-sprite">
-      <path fill="#191225" d="M6 25h12v1H6zM7 13h10v2h3v7h-3v3h-4v-3h-2v3H7v-3H4v-7h3z" />
+      <path fill="#191225" d="M7 13h10v2h3v7H4v-7h3z" />
+      <path className="sprite-foot sprite-foot-left" fill="#191225" d="M7 21h4v4h1v1H6v-1h1z" />
+      <path className="sprite-foot sprite-foot-right" fill="#191225" d="M13 21h4v4h1v1h-6v-1h1z" />
       <path fill={suits[character.suit]} d="M8 14h8v2h3v5h-3v2h-3v-2h-2v2H8v-2H5v-5h3z" />
       <path fill="#f4d59f" d="M11 16h2v2h-2z" />
       <path fill={skin[character.skin]} d="M8 4h8v2h2v6h-2v2H8v-2H6V6h2zM5 19h2v2H5zM17 19h2v2h-2z" />

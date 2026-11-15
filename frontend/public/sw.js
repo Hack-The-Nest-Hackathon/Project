@@ -1,4 +1,4 @@
-const cacheName = "field-notes-v6";
+const cacheName = "field-notes-v11";
 const sceneAssets = new Set([
   "/orbit.png", "/market.png", "/ship.png", "/outpost.png",
   "/cartridge.png", "/guide.png", "/journal.png",

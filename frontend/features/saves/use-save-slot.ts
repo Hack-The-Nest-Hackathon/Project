@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { isProgress, loadSaves, saveProgress, type Progress } from "../lib/api/saves";
+import { isProgress, loadSaves, saveProgress, type Progress } from "../../lib/api/saves";
 
 const emptySave: Progress = { planet: "market", observed: [], badges: [] };
 const storagePrefix = "field-notes-progress-v1";
+const activeSlotKey = "field-notes-active-slot";
 
 export function useSaveSlot() {
   const [slot, setSlot] = useState(1);
@@ -16,6 +17,10 @@ export function useSaveSlot() {
 
   useEffect(() => {
     mounted.current = true;
+    try {
+      const previous = Number(localStorage.getItem(activeSlotKey));
+      if (previous === 2 || previous === 3) setSlot(previous);
+    } catch { /* Continue with the default slot when storage is unavailable. */ }
     return () => { mounted.current = false; };
   }, []);
 
@@ -53,6 +58,7 @@ export function useSaveSlot() {
 
   function selectSlot(nextSlot: number) {
     if (slot === nextSlot) return;
+    try { localStorage.setItem(activeSlotKey, String(nextSlot)); } catch { /* Selection still works in this session. */ }
     setSlotLoading(true);
     setSlot(nextSlot);
   }

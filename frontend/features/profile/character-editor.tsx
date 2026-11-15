@@ -1,7 +1,8 @@
+import PixelIcon from "../../components/pixel-icon";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import CharacterSprite from "./character-sprite";
-import { characterOptions, type Appearance, type Character } from "../lib/character";
+import CharacterSprite from "../../components/character-sprite";
+import { characterOptions, type Appearance, type Character } from "../../lib/character";
 
 const names = ["Nova", "Vesper", "Kestrel", "Sable", "Mira", "Orion", "Juniper", "Sol", "Iona", "Tavi", "Rune", "Neri"];
 const labels: Record<keyof Appearance, string> = {
@@ -54,8 +55,8 @@ export default function CharacterEditor({ character, isNew, reducedMotion, onSav
       </motion.div>
       <div>
         <div className="profile-steps" aria-label="Profile setup">
-          <button type="button" className="game-button" aria-pressed={step === "name"} onClick={() => setStep("name")}>Name</button>
-          <button type="button" className="game-button" aria-pressed={step === "look"} disabled={!name} onClick={() => setStep("look")}>Appearance</button>
+          <button type="button" className="game-button" aria-pressed={step === "name"} onClick={() => setStep("name")}><PixelIcon name="profile" /> Name</button>
+          <button type="button" className="game-button" aria-pressed={step === "look"} disabled={!name} onClick={() => setStep("look")}><PixelIcon name="edit" /> Appearance</button>
         </div>
         <AnimatePresence initial={false} mode="wait">
           <motion.div key={step} className="character-form" initial={reducedMotion ? false : { opacity: 0, x: 8 }}
@@ -67,8 +68,8 @@ export default function CharacterEditor({ character, isNew, reducedMotion, onSav
                     onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
                 </label>
                 <div className="answer-grid">
-                  <button type="button" className="game-button" onClick={suggestName}>Suggest a name</button>
-                  <button type="submit" className="game-button primary" disabled={!name}>Choose appearance →</button>
+                  <button type="button" className="game-button" onClick={suggestName}><PixelIcon name="shuffle" /> Suggest a name</button>
+                  <button type="submit" className="game-button primary" disabled={!name}><PixelIcon name="launch" /> Choose appearance</button>
                 </div>
               </>
             ) : (
@@ -83,10 +84,10 @@ export default function CharacterEditor({ character, isNew, reducedMotion, onSav
                   ))}
                 </div>
                 <div className="answer-grid">
-                  <button type="button" className="game-button" onClick={randomize}>Randomize look</button>
+                  <button type="button" className="game-button" onClick={randomize}><PixelIcon name="shuffle" /> Randomize look</button>
                   <motion.button type="submit" className="game-button primary" disabled={!name}
                     whileTap={reducedMotion ? undefined : { scale: .96 }}>
-                    {isNew ? "Create profile & launch" : "Save profile"}
+                    <PixelIcon name={isNew ? "launch" : "save"} /> {isNew ? "Create profile & launch" : "Save profile"}
                   </motion.button>
                 </div>
               </>

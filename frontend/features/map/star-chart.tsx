@@ -1,7 +1,8 @@
+import PixelIcon from "../../components/pixel-icon";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import clsx from "clsx";
-import type { Scene } from "../lib/api/world";
+import type { Scene } from "../../lib/api/world";
 
 const width = 1140;
 const height = 940;
@@ -65,9 +66,9 @@ export default function StarChart({ worlds, current, selected, badges, reducedMo
         <p id="chart-instructions">Drag or swipe to explore. Select a planet to plot a route.</p>
         <div className="chart-zoom" aria-label="Map zoom">
           <button className="game-button" aria-label="Zoom out" disabled={zoom <= .75}
-            onClick={() => setZoom((level) => Math.max(.75, level - .25))}>−</button>
+            onClick={() => setZoom((level) => Math.max(.75, level - .25))}><PixelIcon name="minus" /></button>
           <button className="game-button" aria-label="Zoom in" disabled={zoom >= 1.5}
-            onClick={() => setZoom((level) => Math.min(1.5, level + .25))}>+</button>
+            onClick={() => setZoom((level) => Math.min(1.5, level + .25))}><PixelIcon name="plus" /></button>
         </div>
       </div>
       <div ref={viewport} tabIndex={0} role="region" aria-label="Scrollable star chart" aria-describedby="chart-instructions"
@@ -107,7 +108,7 @@ export default function StarChart({ worlds, current, selected, badges, reducedMo
                 aria-label={`${world.title}${world.id === current ? ", current location" : ""}${locked ? `, requires ${world.requiredBadges} badges` : ""}`}
                 onClick={() => onSelect(world.id)}>
                 <span className="planet-icon" style={{ backgroundImage: `url(/worlds/${encodeURIComponent(world.id)}.png)` }} aria-hidden="true" />
-                <span className="chart-world-name">{world.title}</span>
+                <span className="chart-world-name">{locked && <PixelIcon name="lock" />}{world.title}</span>
               </button>
             );
           })}
