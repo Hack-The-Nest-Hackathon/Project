@@ -1,4 +1,6 @@
+import AccountGate from "../features/auth/account-gate";
 import type { Metadata, Viewport } from "next";
+import { BriefingTransition } from "../features/title/briefing-link";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,7 +12,7 @@ export const metadata: Metadata = {
     apple: { url: "/icon-voices-180.png", sizes: "180x180", type: "image/png" },
   },
 };
-export const viewport: Viewport = { themeColor: "#100e21", viewportFit: "cover" };
+export const viewport: Viewport = { themeColor: "#151b25", viewportFit: "cover" };
 
 export default function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -18,7 +20,7 @@ export default function Layout({ children }: Readonly<{ children: React.ReactNod
       <head>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" />
       </head>
-      <body>{children}</body>
+      <body><AccountGate><BriefingTransition>{children}</BriefingTransition></AccountGate></body>
     </html>
   );
 }

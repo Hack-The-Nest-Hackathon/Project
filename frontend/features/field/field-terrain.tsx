@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { fieldRegion, landmarks, landingSpot, trailDistanceSquared, trailLimit, trailWidth } from "./field-layout";
 import type { Scene } from "../../lib/api/world";
 
@@ -10,7 +10,7 @@ const palettes = {
   dune: { trail: "#c89a73", rim: "#715062", dark: "#4e384f", mid: "#a56554", light: "#ffd690", prop: "cactus" },
 } as const;
 
-export default function FieldTerrain({ scene }: { scene: Scene }) {
+export default function FieldTerrain({ scene, rocket }: { scene: Scene; rocket: RefObject<HTMLSpanElement | null> }) {
   const canvas = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -26,6 +26,17 @@ export default function FieldTerrain({ scene }: { scene: Scene }) {
       const x = (value: number) => value * w / 100;
       const y = (value: number) => value * h / 100;
       const unit = Math.min(w, h) / 100;
+      const sprite = rocket.current;
+      const rocketWidth = (sprite?.offsetWidth ?? 0) * w / Math.max(1, surface.clientWidth);
+      const rocketHeight = (sprite?.offsetHeight ?? 0) * h / Math.max(1, surface.clientHeight);
+      const dock = {
+        left: x(landingSpot.x) - Math.max(x(8), rocketWidth / 2 + 4),
+        right: x(landingSpot.x) + Math.max(x(8), rocketWidth / 2 + 4),
+        top: y(landingSpot.y) - Math.max(y(5), rocketHeight + 6),
+        bottom: y(landingSpot.y + 9),
+      };
+      const overlapsDock = (left: number, top: number, right: number, bottom: number) =>
+        left < dock.right && right > dock.left && top < dock.bottom && bottom > dock.top;
       let state = seed;
       const random = () => ((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 4294967296);
 
@@ -71,6 +82,8 @@ export default function FieldTerrain({ scene }: { scene: Scene }) {
 
       const propSize = Math.max(1, Math.round(unit));
       function scenery(px: number, py: number, size: number) {
+        // Check the canopy and trunk, since a prop outside the pad can still overhang it.
+        if (overlapsDock(px - 5 * size, py - 11 * size, px + 5 * size, py + size)) return;
         const draw = (dx: number, dy: number, width: number, height: number, color: string) =>
           pixel(px + dx * size, py + dy * size, width * size, height * size, color);
         draw(-4, 0, 8, 1, palette.dark);
@@ -114,6 +127,7 @@ export default function FieldTerrain({ scene }: { scene: Scene }) {
 
       for (const px of [11, 22, 47, 71, 88]) {
         const py = px < 23 ? 59 - (px - 11) * 1.4 : px === 88 ? 60 : 44;
+        if (overlapsDock(x(px) - 1, y(py) - 4, x(px) + 1, y(py) + 1)) continue;
         pixel(x(px) - 1, y(py) - 3, 2, 4, palette.dark);
         pixel(x(px) - 1, y(py) - 4, 2, 2, palette.light);
       }
@@ -133,8 +147,9 @@ export default function FieldTerrain({ scene }: { scene: Scene }) {
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(surface);
+    if (rocket.current) observer.observe(rocket.current);
     return () => observer.disconnect();
-  }, [scene]);
+  }, [scene, rocket]);
 
   return <canvas ref={canvas} className="field-terrain" aria-hidden="true" />;
 }

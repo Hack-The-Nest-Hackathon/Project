@@ -1,4 +1,4 @@
-import { lines, quizLines } from "./world.js";
+import { lines, quizLines, practiceLines, type SpokenLine } from "./world.js";
 
 let rawKeys: unknown;
 try {
@@ -11,7 +11,26 @@ if (!Array.isArray(rawKeys) || rawKeys.some((key) => typeof key !== "string" || 
 }
 
 const keys: string[] = [...new Set(rawKeys.map((key: string) => key.trim()))];
-const voice = process.env.ELEVENLABS_VOICE_ID?.trim();
+const fallbackVoice = process.env.ELEVENLABS_VOICE_ID?.trim();
+const cast: Readonly<Record<string, { id: string; speed: number; stability: number }>> = {
+  Merchant: { id: "QtY3JBOUKEB5xzrRfOKc", speed: 1.03, stability: 0.40 }, // Maisie, friendly market vendor
+  Baker: { id: "gOupLcAkjEnguROwi4oS", speed: .93, stability: 0.49 }, // Darian, warm and unhurried
+  Quartermaster: { id: "WQP7cQUF5aAS6Axh5yaa", speed: 1, stability: 0.54 }, // Elara, crisp instructions
+  Lamplighter: { id: "OZ0L6eISlOejga3XjDFt", speed: .91, stability: 0.56 }, // Talia, gentle guide
+  Scout: { id: "dvbL7qkNGZY1IqPGZAjM", speed: 1.08, stability: 0.37 }, // Elowen, eager scout
+  Gatekeeper: { id: "6WwXjDDEMyNmFG95zycZ", speed: .94, stability: 0.57 }, // Eldrin, measured baritone
+  "station-0": { id: "QtY3JBOUKEB5xzrRfOKc", speed: .98, stability: 0.43 },
+  "station-1": { id: "gOupLcAkjEnguROwi4oS", speed: .95, stability: 0.49 },
+  "station-2": { id: "WQP7cQUF5aAS6Axh5yaa", speed: 1.04, stability: 0.52 },
+  player: { id: "l7kNoIfnJKPg7779LI2t", speed: 1.02, stability: 0.46 }, // Eddie, conversational explorer
+};
+const overrides: unknown = JSON.parse(process.env.ELEVENLABS_CHARACTER_VOICES || "{}");
+if (!overrides || typeof overrides !== "object" || Array.isArray(overrides)
+  || Object.entries(overrides).some(([role, id]) =>
+    !Object.hasOwn(cast, role) || typeof id !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(id))) {
+  throw new Error("ELEVENLABS_CHARACTER_VOICES must map supported roles to voice IDs");
+}
+const customVoices = overrides as Record<string, string>;
 const model = process.env.ELEVENLABS_MODEL_ID ?? "eleven_multilingual_v2";
 const concurrency = Number(process.env.ELEVENLABS_CONCURRENCY ?? 1);
 if (!Number.isSafeInteger(concurrency) || concurrency < 1) {
@@ -76,14 +95,40 @@ export async function requestSpeech(
   throw new SpeechError(503, "Speech credentials are unavailable");
 }
 
-async function synthesize(voiceId: string, line: { speech: string; language: string }) {
+const conversationDelivery = {
+  greeting: { stabilityOffset: -.04, style: .16, speed: 1 },
+  question: { stabilityOffset: -.06, style: .13, speed: .97 },
+  praise: { stabilityOffset: -.08, style: .2, speed: 1.02 },
+  neutral: { stabilityOffset: 0, style: .08, speed: 1 },
+} as const;
+
+function voiceSettings(line: SpokenLine, profile: (typeof cast)[string] | undefined) {
+  const spokenDialogue = line.language === "en";
+  if (model === "eleven_v3") return { stability: spokenDialogue ? .5 : 1 };
+
+  const delivery = conversationDelivery[line.delivery ?? "neutral"];
+  const baseSpeed = profile?.speed ?? 1;
+  const settings = spokenDialogue
+    ? { speed: baseSpeed * delivery.speed, stability: (profile?.stability ?? .48) + delivery.stabilityOffset, style: delivery.style }
+    : { speed: Math.min(baseSpeed, 1) * .95, stability: .68, style: 0 };
+  return {
+    speed: Number(settings.speed.toFixed(2)),
+    stability: Number(settings.stability.toFixed(2)),
+    style: settings.style,
+    similarity_boost: .75,
+  };
+}
+
+async function synthesize(voiceId: string, settings: ReturnType<typeof voiceSettings>, line: SpokenLine) {
   const signal = AbortSignal.timeout(8_000);
   const response = await requestSpeech((key) => fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
       {
         method: "POST",
         headers: { "xi-api-key": key, "Content-Type": "application/json", Accept: "audio/mpeg" },
-        body: JSON.stringify({ text: line.speech, model_id: model, language_code: line.language }),
+        body: JSON.stringify({
+          text: line.phrase, model_id: model, language_code: line.language, voice_settings: settings,
+        }),
         signal,
       },
   ));
@@ -91,20 +136,24 @@ async function synthesize(voiceId: string, line: { speech: string; language: str
 }
 
 export function getSpeech(lineId: string): Promise<Buffer> {
-  const line = lines.get(lineId) ?? quizLines.get(lineId);
+  const line = lines.get(lineId) ?? quizLines.get(lineId) ?? practiceLines.get(lineId);
   if (!line) throw new SpeechError(404, "Line not found");
-  const cacheKey = JSON.stringify([line.language, line.speech]);
+  const role = line.voiceRole ?? "";
+  const profile = cast[role];
+  const voice = customVoices[role] ?? profile?.id ?? fallbackVoice ?? cast.player.id;
+  const settings = voiceSettings(line, profile);
+  const cacheKey = JSON.stringify([voice, settings, model, line.language, line.phrase]);
   const cached = cache.get(cacheKey);
   if (cached) return Promise.resolve(cached);
   const existing = pending.get(cacheKey);
   if (existing) return existing;
-  if (!keys.length || !voice) throw new SpeechError(503, "Speech is not configured");
+  if (!keys.length) throw new SpeechError(503, "Speech is not configured");
   if (active >= concurrency || Date.now() < retryAfter) {
     throw new SpeechError(503, "Speech is busy. Try again shortly");
   }
 
   active++;
-  const request = synthesize(voice, line)
+  const request = synthesize(voice, settings, line)
     .then((audio) => {
       cache.set(cacheKey, audio);
       return audio;

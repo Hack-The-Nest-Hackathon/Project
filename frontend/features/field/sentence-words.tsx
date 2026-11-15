@@ -6,12 +6,10 @@ export function sentenceTokens(phrase: string) {
   }));
 }
 
-export default function SentenceWords({ phrase, glosses, language, newWords, onPick, roles }: {
+export default function SentenceWords({ phrase, glosses, newWords, onPick }: {
   phrase: string;
   glosses?: (string | undefined)[];
-  language?: string;
   newWords?: ReadonlySet<string>;
-  roles?: string[];
   onPick?: (word: string) => void;
 }) {
   const [active, setActive] = useState<number | null>(null);
@@ -22,13 +20,15 @@ export default function SentenceWords({ phrase, glosses, language, newWords, onP
 
   return (
     <>
-      <div className="word-tokens" lang={language}>
-        {tokens.map(({ text, word }, index) => (
+      <div className="word-tokens">
+        {tokens.map(({ text, word }, index) => onPick ? (
           <button key={index} type="button" aria-pressed={active === index}
             className={isNew(word, index) ? "new-word" : undefined}
-            onClick={() => { setActive(index); onPick?.(word); }}>
-            {text}{roles?.[index] && <span className="sentence-role" lang="en">{roles[index]}</span>}
+            onClick={() => { setActive(index); onPick(word); }}>
+            {text}
           </button>
+        ) : (
+          <span key={index} className={isNew(word, index) ? "new-word" : undefined}>{text}</span>
         ))}
       </div>
       {active !== null && hint && <p className="field-label word-help" role="status">

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useGameMusic(track: string) {
-  const [enabled, setEnabled] = useState(false);
-  const [state, setState] = useState<"off" | "loading" | "playing" | "error">("off");
+  const [enabled, setEnabled] = useState(true);
+  const [state, setState] = useState<"off" | "waiting" | "loading" | "playing" | "error">("waiting");
   const player = useRef<HTMLAudioElement | null>(null);
   const source = useRef("");
   const ducked = useRef(false);
@@ -23,12 +23,31 @@ export function useGameMusic(track: string) {
     };
     audio.onerror = fail;
     audio.src = url;
-    void audio.play().catch(fail);
+    void audio.play().catch((error: unknown) => {
+      if (source.current !== url) return;
+      if (error instanceof DOMException && error.name === "NotAllowedError") {
+        source.current = "";
+        setState("waiting");
+        return;
+      }
+      fail();
+    });
   }, []);
 
   useEffect(() => {
     if (enabled) play(track);
   }, [enabled, play, track]);
+
+  useEffect(() => {
+    if (!enabled || state !== "waiting") return;
+    const start = () => play(track);
+    window.addEventListener("click", start);
+    window.addEventListener("keydown", start);
+    return () => {
+      window.removeEventListener("click", start);
+      window.removeEventListener("keydown", start);
+    };
+  }, [enabled, play, state, track]);
 
   useEffect(() => () => {
     source.current = "";
@@ -44,7 +63,7 @@ export function useGameMusic(track: string) {
   }, []);
 
   function toggle() {
-    if (!enabled || state === "error") {
+    if (!enabled || state === "error" || state === "waiting") {
       play(track);
       setEnabled(true);
       return;

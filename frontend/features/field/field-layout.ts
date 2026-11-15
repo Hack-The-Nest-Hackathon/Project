@@ -53,7 +53,7 @@ export function surveyStations(scene: Scene): Stop[] {
 export function fieldRegion(scene: Scene) {
   if (scene.id === "market") return "market";
   if (scene.id === "outpost") return "outpost";
-  if (scene.dialect === "Harbor speech") return "harbor";
-  if (scene.dialect === "Highland speech") return "highland";
+  if (scene.region === "harbor") return "harbor";
+  if (scene.region === "highland") return "highland";
   return "dune";
 }

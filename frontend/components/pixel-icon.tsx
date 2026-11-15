@@ -1,4 +1,5 @@
 const shapes = {
+  menu: "M2 3h12v2H2zm0 4h12v2H2zm0 4h12v2H2z",
   apple: "M8 1h3v2H9v2h3v1h2v6h-1v2h-3v1H6v-1H3v-2H2V7h2V5h4z",
   bread: "M5 3h7v1h2v2h1v5h-1v2H2v-1H1V8h1V6h1V4h2zm1 2H4v3h2zm4 0H8v3h2zm3 1h-2v3h2z",
   lantern: "M6 1h4v3h2v2h1v7h-2v2H5v-2H3V6h1V4h2zm1 2v1h2V3zM5 7v4h6V7z",
@@ -18,6 +19,7 @@ const shapes = {
   land: "M6 1h4v7h3l-5 5-5-5h3zM2 14h12v2H2z",
   lock: "M5 1h6v2h2v4h2v8H1V7h2V3h2zm0 6h6V4H5zm2 3v3h2v-3z",
   journal: "M3 1h10v13H3V2H1v12h2v1h10v-1H3zm2 3v2h6V4zm0 4v2h6V8z",
+  camera: "M5 3h6l1 2h3v9H1V5h3zm1 4v1H5v3h1v1h4v-1h1V8h-1V7zm1 2h2v2H7z",
   badge: "M5 1h6v2h2v6h-2v2h1v5l-4-2-4 2v-5h1V9H3V3h2zm1 3v4h4V4z",
   hint: "M5 1h6v2h2v6h-2v3H5V9H3V3h2zm1 4v3h4V5zM6 13h4v2H6z",
   mic: "M6 1h4v2h1v6h-1v2H6V9H5V3h1zM2 7h2v4h2v2h4v-2h2V7h2v5h-2v2H9v2H7v-2H4v-2H2z",

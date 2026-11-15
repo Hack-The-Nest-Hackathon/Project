@@ -1,102 +1,131 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { isProgress, loadSaves, saveProgress, type Progress } from "../../lib/api/saves";
 
+type Slots = Partial<Record<number, Progress>>;
 const emptySave: Progress = { planet: "market", observed: [], badges: [] };
-const storagePrefix = "field-notes-progress-v1";
-const activeSlotKey = "field-notes-active-slot";
+const prefix = "voices-saves:";
 
-function createSaveKey() {
-  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
-
-  // HTTP on a LAN address still supports getRandomValues. Keep the UUID v4 format the API expects.
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+export function clearSaveCache(accountId: string) {
+  try {
+    localStorage.removeItem(prefix + accountId);
+    localStorage.removeItem(prefix + accountId + ":slot");
+  } catch { /* The game also works with browser storage disabled. */ }
 }
 
-export function useSaveSlot() {
+export function useSaveSlot(accountId: string) {
   const [slot, setSlot] = useState(1);
-  const [savedSlots, setSavedSlots] = useState<Partial<Record<number, Progress>>>({});
-  const progress = savedSlots[slot] ?? emptySave;
+  const [savedSlots, setSavedSlots] = useState<Slots>({});
   const [saveStatus, setSaveStatus] = useState("");
   const [slotLoading, setSlotLoading] = useState(true);
-  const saveKey = useRef("");
-  const queuedSave = useRef<Promise<void>>(Promise.resolve());
-  const mounted = useRef(false);
+  const [syncFailed, setSyncFailed] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
-  useEffect(() => {
-    mounted.current = true;
-    try {
-      const previous = Number(localStorage.getItem(activeSlotKey));
-      if (previous === 2 || previous === 3) setSlot(previous);
-    } catch { /* Continue with the default slot when storage is unavailable. */ }
-    return () => { mounted.current = false; };
-  }, []);
+  const confirmed = useRef<Slots>({});
+  const pending = useRef(new Map<number, Progress>());
+  const drain = useRef<Promise<void> | null>(null);
+  const lifecycle = useRef<AbortController | null>(null);
+  const key = prefix + accountId;
+
+  const flushSaves = useCallback(() => {
+    const signal = lifecycle.current?.signal;
+    if (!signal || signal.aborted) return Promise.resolve(!pending.current.size);
+    drain.current ??= (async () => {
+      setSyncFailed(false);
+      for (const [number, progress] of pending.current) {
+        while (!signal.aborted) {
+          const latest = pending.current.get(number) ?? progress;
+          try {
+            await saveProgress(accountId, number, latest, signal);
+            if (signal.aborted) return;
+            confirmed.current[number] = latest;
+            try { localStorage.setItem(key, JSON.stringify(confirmed.current)); } catch { /* PostgreSQL has the save. */ }
+            if (pending.current.get(number) === latest) {
+              pending.current.delete(number);
+              break;
+            }
+          } catch {
+            if (!signal.aborted) {
+              setSyncFailed(true);
+              setSaveStatus("Progress is waiting to sync.");
+            }
+            return;
+          }
+        }
+      }
+      if (!signal.aborted) setSaveStatus("");
+    })().finally(() => { drain.current = null; });
+    return drain.current.then(() => !pending.current.size);
+  }, [accountId, key]);
 
   useEffect(() => {
     const controller = new AbortController();
-    async function load() {
-      const local: Partial<Record<number, Progress>> = {};
-      let remote: Partial<Record<number, Progress>> = {};
-      let status = "";
-      for (const number of [1, 2, 3]) {
-        try {
-          const value: unknown = JSON.parse(localStorage.getItem(`${storagePrefix}-${number}`) ?? "null");
-          if (isProgress(value)) local[number] = value;
-        } catch { /* An unreadable local save can be recovered from the server. */ }
-      }
-
-      try {
-        saveKey.current ||= localStorage.getItem("field-notes-player") ?? createSaveKey();
-        localStorage.setItem("field-notes-player", saveKey.current);
-        await queuedSave.current;
-        controller.signal.throwIfAborted();
-        remote = await loadSaves(saveKey.current, controller.signal);
-      } catch {
-        status = "Using a local save.";
-      }
-      if (controller.signal.aborted) return;
-      const available = { ...remote, ...local };
-      setSavedSlots((current) => ({ ...current, ...available }));
-      setSaveStatus(status);
-      setSlotLoading(false);
+    lifecycle.current = controller;
+    const onOnline = () => { void flushSaves(); };
+    function warnBeforeUnload(event: BeforeUnloadEvent) {
+      if (!pending.current.size) return;
+      event.preventDefault();
+      event.returnValue = true;
     }
-    void load();
+    window.addEventListener("online", onOnline);
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => {
+      controller.abort();
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("beforeunload", warnBeforeUnload);
+    };
+  }, [flushSaves]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    try {
+      const previous = Number(localStorage.getItem(key + ":slot"));
+      if (previous === 2 || previous === 3) setSlot(previous);
+      const value = JSON.parse(localStorage.getItem(key) ?? "{}");
+      if (value && typeof value === "object") {
+        const cached: Slots = {};
+        for (const number of [1, 2, 3]) {
+          if (isProgress(value[number])) cached[number] = value[number];
+        }
+        setSavedSlots(cached);
+      }
+    } catch { /* An unreadable cache is replaced with the server snapshot. */ }
+
+    loadSaves(accountId, controller.signal).then((remote) => {
+      if (controller.signal.aborted) return;
+      confirmed.current = remote;
+      setSavedSlots(remote);
+      try { localStorage.setItem(key, JSON.stringify(remote)); } catch { /* PostgreSQL has the saves. */ }
+      setSlotLoading(false);
+      setSaveStatus("");
+    }).catch(() => {
+      if (controller.signal.aborted) return;
+      setLoadFailed(true);
+      setSaveStatus("Could not load cloud saves. Retry to continue.");
+    });
     return () => controller.abort();
-  }, [slot]);
+  }, [accountId, key, attempt]);
+
+  function retryLoad() {
+    setLoadFailed(false);
+    setAttempt((value) => value + 1);
+  }
 
   function selectSlot(nextSlot: number) {
-    if (slot === nextSlot) return;
-    try { localStorage.setItem(activeSlotKey, String(nextSlot)); } catch { /* Selection still works in this session. */ }
-    setSlotLoading(true);
+    try { localStorage.setItem(key + ":slot", String(nextSlot)); } catch { /* Selection works for this visit. */ }
     setSlot(nextSlot);
   }
 
   function save(next: Progress) {
+    if (slotLoading) return;
     setSavedSlots((current) => ({ ...current, [slot]: next }));
-    let localSaved = false;
-    try {
-      localStorage.setItem(`${storagePrefix}-${slot}`, JSON.stringify(next));
-      localSaved = true;
-    } catch { /* The server can still store the save. */ }
-
-    const key = saveKey.current;
-    const failureMessage = localSaved ? "Using a local save." : "Progress could not be saved.";
-    if (!key) {
-      setSaveStatus(failureMessage);
-      return;
-    }
-    queuedSave.current = queuedSave.current.then(async () => {
-      try {
-        await saveProgress(key, slot, next);
-        if (mounted.current) setSaveStatus("");
-      } catch {
-        if (mounted.current) setSaveStatus(failureMessage);
-      }
-    });
+    pending.current.set(slot, next);
+    setSaveStatus("Syncing progress…");
+    void flushSaves();
   }
 
-  return { progress, savedSlots, slot, selectSlot, saveStatus, slotLoading, save };
+  return {
+    progress: savedSlots[slot] ?? emptySave, savedSlots, slot, selectSlot, saveStatus,
+    slotLoading, loadFailed, retryLoad, save, flushSaves, syncFailed,
+  };
 }

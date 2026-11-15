@@ -3,16 +3,22 @@ import { request } from "./client";
 export type Clue = {
   id: string; speaker: string; context: string; phrase: string; pronunciation?: string;
   translation?: string; glosses?: string[];
+  opening?: { npc: string; player: string; question: string; bridge: string; speak?: string };
   roles?: string[];
-  observation?: { label: string; prop: "apple" | "bread" | "lantern" | "marker"; count: number; action: "show" | "load" | "carry" | "see" };
+  followUp?: { id: string; phrase: string; pronunciation?: string; translation: string; prompt: string; promptAudioId?: string; alternatives: string[]; glosses?: string[]; roles?: string[] };
+  replies?: { id: string; phrase: string; pronunciation?: string; translation: string; glosses?: string[]; roles: string[]; choice: string; prompt: string; promptAudioId?: string; acknowledgment: string; acknowledgmentAudioId?: string }[];
+  practice?: { id: string; word: string; pronunciation?: string }[];
+  observation?: { label: string; prop: "apple" | "bread" | "lantern" | "marker" | "crate"; count: number; action: "show" | "load" | "carry" | "see" };
 };
 export type Scene = {
   id: string;
   title: string;
   language: string;
-  dialect?: string;
+  region?: "harbor" | "highland" | "dune";
   description: string;
   requiredBadges: number;
+  audioRevision?: string;
+  mission?: { briefing: string; difficulty: number; grammar: string };
   clues: Clue[];
   questions: { prompt: string; options: string[]; phrase?: string; pronunciation?: string; audioId?: string; glosses?: (string | null)[] }[];
 };

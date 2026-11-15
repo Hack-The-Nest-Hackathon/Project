@@ -17,15 +17,18 @@ type Props = {
   busy: boolean;
   paused: boolean;
   playingClue: string | null;
+  getVoice: (id: string) => HTMLAudioElement | null;
   reducedMotion: boolean | null;
   onListen: (clue: Clue) => void;
   onStopAudio: () => void;
-  onSpeakReply: (clue: Clue, report: (status: string, understood?: boolean) => void) => Promise<void>;
+  onPlayAudio: (id: string) => void;
   newWordsByClue: ReadonlyMap<string, ReadonlySet<string>>;
   shipReady: boolean;
   landing: boolean;
   onLand: () => void;
   onBoard: () => void;
+  onWalk: () => void;
+  onPractice: () => void;
 };
 
 const directions = {
@@ -112,9 +115,32 @@ function routeAround(start: Position, goal: Position, stops: Stop[]): Position[]
   return [];
 }
 
+function routeToTap(start: Position, tap: Position, stops: Stop[], width: number, height: number) {
+  if (onTrail(tap) && !blocked(tap, stops)) {
+    const direct = routeAround(start, tap, stops);
+    if (direct.length) return direct;
+  }
+
+  // Rank walkable ground by screen distance, so wide and tall views snap naturally.
+  const candidates: { point: Position; distance: number }[] = [];
+  for (let y = 36; y <= 79; y++) {
+    for (let x = 5; x <= 95; x++) {
+      const point = { x, y };
+      if (!onTrail(point) || blocked(point, stops)) continue;
+      candidates.push({ point, distance: ((x - tap.x) * width) ** 2 + ((y - tap.y) * height) ** 2 });
+    }
+  }
+  candidates.sort((a, b) => a.distance - b.distance);
+  for (const { point } of candidates.slice(0, 32)) {
+    const route = routeAround(start, point, stops);
+    if (route.length) return route;
+  }
+  return [];
+}
+
 const defaultFootprint = { width: 6, depth: 3, offsetY: -1 };
 
-export default function FieldWalk({ scene, character, observed, busy, paused, playingClue, reducedMotion, onListen, onStopAudio, onSpeakReply, newWordsByClue, landing, onLand, shipReady, onBoard }: Props) {
+export default function FieldWalk({ scene, character, observed, busy, paused, playingClue, getVoice, reducedMotion, onListen, onStopAudio, onPlayAudio, newWordsByClue, landing, onLand, shipReady, onBoard, onWalk, onPractice }: Props) {
   const [shipFootprint, setShipFootprint] = useState(defaultFootprint);
   const shipStop = useMemo<Stop>(() => ({ ...landingSpot, name: "Survey ship", footprint: shipFootprint }), [shipFootprint]);
   const stations = useMemo(() => surveyStations(scene), [scene]);
@@ -127,6 +153,16 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
   const [moving, setMoving] = useState(false);
   const [facingLeft, setFacingLeft] = useState(false);
   const [speaker, setSpeaker] = useState<string | null>(null);
+  const [canSpeak, setCanSpeak] = useState(() => {
+    if (typeof window === "undefined" || !window.isSecureContext || !navigator.mediaDevices?.getUserMedia
+      || typeof MediaRecorder === "undefined") return false;
+    try { return localStorage.getItem("voices-skip-speaking") !== "yes"; } catch { return true; }
+  });
+
+  function disableSpeaking() {
+    setCanSpeak(false);
+    try { localStorage.setItem("voices-skip-speaking", "yes"); } catch { /* Keep the preference for this visit. */ }
+  }
   const [dialogue, setDialogue] = useState<Clue | null>(null);
   const held = useRef(new Map<string, Direction>());
   const waypoint = useRef<{ name: string | null; points: Position[] } | null>(null);
@@ -147,6 +183,7 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
   const lines = scene.clues.filter((clue) => clue.speaker === speaker);
   const observationIndex = dialogue ? lines.findIndex(({ id }) => id === dialogue.id) : -1;
   const nextObservation = lines[observationIndex + 1];
+  const startObservation = lines.find(({ id }) => !observed.includes(id)) ?? lines[0];
 
   useEffect(() => {
     const surface = stage.current;
@@ -180,7 +217,8 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
 
   function observe(clue: Clue) {
     setDialogue(clue);
-    onListen(clue);
+    if (clue.opening) onPlayAudio(`${clue.id}-hello`);
+    else onListen(clue);
   }
 
   useEffect(() => {
@@ -229,20 +267,22 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
       const speed = Math.max(110, Math.min(scale.width, scale.height) * 32);
       const smoothing = 1 - Math.exp(-20 * elapsed);
       const movingSpeed = goal && elapsed ? Math.min(speed, length / elapsed) : speed;
-      velocityX += ((length ? dx / length * movingSpeed : 0) - velocityX) * smoothing;
-      velocityY += ((length ? dy / length * movingSpeed : 0) - velocityY) * smoothing;
+      const steering = goal ? 1 : smoothing;
+      velocityX += ((length ? dx / length * movingSpeed : 0) - velocityX) * steering;
+      velocityY += ((length ? dy / length * movingSpeed : 0) - velocityY) * steering;
       let advanced = false;
       if (elapsed && Math.hypot(velocityX, velocityY) > 4) {
         const desired = withinGround(current.x + velocityX * elapsed / scale.width, current.y + velocityY * elapsed / scale.height);
         const horizontal = { x: desired.x, y: current.y };
         const vertical = { x: current.x, y: desired.y };
         const next = canMove(current, desired, stops) ? desired
-          : canMove(current, horizontal, stops) ? horizontal
-          : canMove(current, vertical, stops) ? vertical : current;
+          : !goal && canMove(current, horizontal, stops) ? horizontal
+          : !goal && canMove(current, vertical, stops) ? vertical : current;
         if (!goal && held.current.size && !onTrail(desired) && next.x === current.x && next.y === current.y && !warningTimeout.current) {
           warnAboutTrail();
         }
         if (next.x !== current.x || next.y !== current.y) {
+          if (!wasMoving) onWalk();
           advanced = true;
           location.current = next;
           setPosition(next);
@@ -285,7 +325,7 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
       window.removeEventListener("blur", stop);
       window.removeEventListener("resize", resize);
     };
-  }, [paused, busy, landing, stops]);
+  }, [paused, busy, landing, stops, onWalk]);
 
   function move(key: string, direction: Direction) {
     waypoint.current = null;
@@ -302,7 +342,7 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
       directionFacing.current = x < 0;
       setFacingLeft(directionFacing.current);
     }
-    if (canMove(current, next, stops)) { location.current = next; setPosition(next); }
+    if (canMove(current, next, stops)) { location.current = next; setPosition(next); onWalk(); }
     else if (!onTrail(next)) warnAboutTrail();
     setSpeaker(null);
     setDialogue(null);
@@ -324,7 +364,8 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
   }
 
   return (
-    <div className="field-walk" data-dialect={scene.dialect} data-region={fieldRegion(scene)} style={{
+    <div className={clsx("field-walk", speaker && speaker !== shipStop.name && "is-conversing")}
+      inert={paused} data-region={fieldRegion(scene)} style={{
       "--world-hue": (worldNumber * 137.5) % 360,
       "--world-orb": `url(/worlds/${encodeURIComponent(scene.id)}.png)`,
     } as React.CSSProperties}>
@@ -333,21 +374,17 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
           if (landing || paused || busy || event.target !== event.currentTarget) return;
           const bounds = event.currentTarget.getBoundingClientRect();
           const destination = withinGround((event.clientX - bounds.left) / bounds.width * 100, (event.clientY - bounds.top) / bounds.height * 100);
-          if (!onTrail(destination)) {
-            waypoint.current = null;
-            warnAboutTrail();
-            return;
-          }
-          const points = routeAround(location.current, destination, stops);
-          if (!points.length) return;
           held.current.clear();
+          waypoint.current = null;
+          const points = routeToTap(location.current, destination, stops, bounds.width, bounds.height);
+          if (!points.length) { warnAboutTrail(); return; }
           setSpeaker(null);
           setDialogue(null);
           waypoint.current = { name: null, points };
         }}>
         {worldNumber > 0 && <div className="field-world-orb" aria-hidden="true" />}
         <div className="walk-ground" aria-hidden="true" />
-        <FieldTerrain scene={scene} />
+        <FieldTerrain scene={scene} rocket={rocketSprite} />
         {stations.map((stop, index) => (
           <button type="button" key={stop.name} className="walk-npc" style={{ left: `${stop.x}%`, top: `${stop.y}%`, zIndex: Math.round(stop.y) }}
             aria-label={`Approach ${stop.name}`} aria-pressed={speaker === stop.name} disabled={busy}
@@ -370,7 +407,7 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
           <span className="player-portrait"><CharacterSprite character={character} /></span>
         </span>
       </div>
-      {landing && <RocketLanding planet={scene.title} reducedMotion={reducedMotion} onFinish={onLand} />}
+      {landing && <RocketLanding planet={scene.title} mission={scene.mission} reducedMotion={reducedMotion} onFinish={onLand} />}
       {!landing && warning && <p className="trail-warning" role="status">
         <PixelIcon name="marker" /> Don’t venture too far off the path!
       </p>}
@@ -410,30 +447,35 @@ export default function FieldWalk({ scene, character, observed, busy, paused, pl
         </motion.div>
       )}
       {speaker && speaker !== shipStop.name && (
-        <motion.div key={speaker} className="walk-dialogue" initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+        <motion.div key={speaker} className="walk-dialogue field-conversation" initial={reducedMotion ? false : { opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}>
-          <div className="observation-heading">
-            <h2>{speaker}</h2>
-            {dialogue && <p className="field-label">{observationIndex + 1} / {lines.length} · {dialogue.observation?.label}</p>}
-          </div>
+          {!dialogue && <div className="observation-heading">
+            <div>
+              <h2>{speaker}</h2>
+            </div>
+            <button type="button" className="conversation-link" disabled={busy} onClick={() => {
+              onStopAudio(); setSpeaker(null); setDialogue(null);
+            }}>Leave</button>
+          </div>}
           {dialogue ? (
             <ObservationBeat key={dialogue.id} clue={dialogue} reducedMotion={reducedMotion}
-              newWords={newWordsByClue.get(dialogue.id)} language={scene.id === "market" ? "fr" : undefined}
-              character={character} speaking={playingClue === dialogue.id} speakerIndex={stations.findIndex(({ name }) => name === speaker)}
-              busy={busy} speak={(report) => onSpeakReply(dialogue, report)} endLocalTurn={onStopAudio}
-              replay={() => onListen(dialogue)} />
+              languageName={scene.language} sceneId={scene.id} canSpeak={canSpeak}
+              disableSpeaking={disableSpeaking} stopAudio={onStopAudio}
+              newWords={newWordsByClue.get(dialogue.id)}
+              character={character} playingClue={playingClue} getVoice={getVoice} speakerIndex={stations.findIndex(({ name }) => name === speaker)}
+              busy={busy} playAudio={onPlayAudio} onPractice={onPractice}
+              listen={() => onListen(dialogue)}
+              leave={() => { onStopAudio(); setSpeaker(null); setDialogue(null); }}
+              continueConversation={() => {
+                if (nextObservation) observe(nextObservation);
+                else { onStopAudio(); setSpeaker(null); setDialogue(null); }
+              }}
+              hasNextObservation={Boolean(nextObservation)} />
           ) : <p className="field-label">{introductions[speaker] ?? "Watch what the local does, then listen for the words that match."}</p>}
-          <div className="answer-grid observation-controls">
-            {observationIndex > 0 && <button type="button" className="game-button" disabled={busy}
-              onClick={() => observe(lines[observationIndex - 1])}><PixelIcon name="back" /> Previous</button>}
-            {dialogue && <button type="button" className="game-button" disabled={busy} onClick={() => onListen(dialogue)}>
-              <PixelIcon name="sound" /> Replay line
-            </button>}
-            {nextObservation && <button type="button" className="game-button primary" disabled={busy}
-              onClick={() => observe(nextObservation)}><PixelIcon name="right" /> {nextObservation.observation?.label ?? "Next observation"}</button>}
-            {!nextObservation && lines.every(({ id }) => observed.includes(id)) &&
-              <p className="field-label observation-complete"><PixelIcon name="check" /> {shipReady ? "Trail complete. Return to the ship." : "Clues collected here. Follow the trail to the next local."}</p>}
-          </div>
+          {!dialogue && startObservation && <div className="reply-actions">
+            <button type="button" className="game-button primary" disabled={busy}
+              onClick={() => observe(startObservation)}><PixelIcon name="chat" /> Start talking</button>
+          </div>}
         </motion.div>
       )}
     </div>

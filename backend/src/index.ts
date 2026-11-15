@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import rateLimit from "@fastify/rate-limit";
+import { requireAccount } from "./auth.js";
 import { registerRoutes } from "./route.js";
 import { db, initializeDatabase } from "../database/index.js";
 
@@ -11,7 +12,21 @@ const app = Fastify({
   ajv: { customOptions: { removeAdditional: false, coerceTypes: false } },
 });
 
+const publicRoutes = new Set([
+  "GET /api/health", "GET /api/auth/login", "GET /api/auth/callback", "POST /api/auth/logout",
+]);
+
 try {
+  app.decorateRequest("account", null);
+  app.addHook("onRequest", async (request, reply) => {
+    const path = request.url.split("?")[0];
+    if (!publicRoutes.has(`${request.method} ${path}`)) return requireAccount(request, reply);
+  });
+  app.addHook("onSend", async (_request, reply, payload) => {
+    reply.header("Cache-Control", "no-store");
+    reply.header("Referrer-Policy", "no-referrer");
+    return payload;
+  });
   app.addHook("onClose", async () => { await db.end(); });
   if (process.env.DATABASE_URL) await initializeDatabase();
   await app.register(rateLimit, { global: false });

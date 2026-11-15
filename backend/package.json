@@ -10,6 +10,16 @@
     "music:generate": "tsx --env-file-if-exists=.env src/generate-music.ts",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {"fastify": "^5.8.0", "@fastify/rate-limit": "^10.3.0", "@types/pg": "^8.15.0", "pg": "^8.16.0"},
-  "devDependencies": {"@types/node": "^22.0.0", "tsx": "^4.20.0", "typescript": "^5.9.0"}
+  "dependencies": {
+    "@fastify/rate-limit": "^10.3.0",
+    "@types/pg": "^8.15.0",
+    "fastify": "^5.8.0",
+    "openid-client": "^6.9.0",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
 }

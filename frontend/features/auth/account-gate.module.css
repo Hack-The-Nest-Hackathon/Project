@@ -1,0 +1,83 @@
+.observatory {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: max(1.25rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(1.25rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  background: #17152c;
+}
+
+.sky {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: url("/orbit.png") center bottom / cover no-repeat;
+  image-rendering: pixelated;
+}
+
+.stars {
+  position: absolute;
+  top: 14%;
+  left: 16%;
+  width: 3px;
+  height: 3px;
+  background: #f1e9da;
+  box-shadow: 10vw 12vh #93c5b8, 51vw 4vh #cfa776, 68vw 23vh #f1e9da,
+    5vw 48vh #cfa776, 61vw 52vh #93c5b8;
+  animation: star-twinkle 4s steps(1, end) infinite;
+}
+
+.checkpoint {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  width: min(100%, 28rem);
+  padding: clamp(1.35rem, 6vw, 2.15rem);
+  border: 3px solid #596573;
+  background: #222a39;
+  box-shadow: inset 0 0 0 3px #151823, 0 5px #0e0f1d, 5px 5px #0e0f1d;
+  text-align: center;
+}
+
+.insignia {
+  display: grid;
+  place-items: center;
+  width: 5.75rem;
+  aspect-ratio: 1;
+  background: #100425;
+  border: 2px solid #778b87;
+  box-shadow: 3px 3px #111422;
+}
+
+.insignia img {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.checkpoint h1 {
+  max-width: 14ch;
+  margin: 0;
+  color: var(--text);
+  font: 700 clamp(1.45rem, 6vw, 2.25rem) / 1.19 var(--display);
+  text-shadow: 2px 3px #111422;
+}
+
+.checkpoint h1 span { color: var(--gold); }
+.intro { max-width: 34ch; color: var(--muted); font-size: .88rem; line-height: 1.55; }
+.controls { display: grid; gap: .75rem; width: 100%; }
+.action { display: grid; min-height: 2.85rem; align-items: center; }
+.action button { width: 100%; border-radius: 2px; }
+.checking { color: var(--mint); font-size: .82rem; }
+.error { color: #ffc9a5; font-size: .82rem; line-height: 1.45; }
+
+@keyframes star-twinkle { 20%, 70% { opacity: .25; } 50%, 90% { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .stars { animation: none; }
+}

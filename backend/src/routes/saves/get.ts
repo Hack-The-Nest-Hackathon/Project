@@ -1,12 +1,14 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { listSaves } from "../../../database/index.js";
-import { saveHeaders, type SaveHeaders } from "../../saves.js";
 
 export default {
-  schema: { headers: saveHeaders },
-  handler: async (request: FastifyRequest<{ Headers: SaveHeaders }>, reply: FastifyReply) => {
-    if (!process.env.DATABASE_URL) return reply.code(503).send({ message: "PostgreSQL is not configured" });
-    const saves = await listSaves(request.headers["x-save-key"]);
-    return reply.header("Cache-Control", "no-store").send(saves);
+  handler: async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!request.account) return reply.code(401).send({ message: "Sign in to continue." });
+    try {
+      return reply.send(await listSaves(request.account.id));
+    } catch (error) {
+      request.log.warn({ errorName: error instanceof Error ? error.name : "Unknown" }, "Save list failed");
+      return reply.code(503).send({ message: "Cloud saves are unavailable." });
+    }
   },
 };

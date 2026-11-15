@@ -1,9 +1,11 @@
-const cacheName = "field-notes-v15";
+const cacheName = "field-notes-v16";
 const sceneAssets = new Set([
   "/orbit.png", "/market.png", "/ship.png", "/outpost.png",
   "/cartridge.png", "/guide.png", "/guide-baker.png", "/guide-scout.png",
-  "/journal.png", "/survey-rocket.png", "/menu-theme.wav", "/map-theme.wav",
+  "/journal.png", "/survey-rocket.png", "/menu-theme.wav", "/map-theme.wav", "/shutter.wav",
 ]);
+
+self.addEventListener("install", (event) => event.waitUntil(self.skipWaiting()));
 
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
@@ -23,8 +25,7 @@ self.addEventListener("fetch", (event) => {
   const isAsset = url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icon-")
     || url.pathname === "/favicon.ico"
     || (url.pathname.startsWith("/worlds/") && url.pathname.endsWith(".png")) || sceneAssets.has(url.pathname);
-  const isGameData = url.pathname === "/api/world" || url.pathname.startsWith("/api/audio/");
-  if (!isPage && !isAsset && !isGameData) return;
+  if (!isPage && !isAsset) return;
 
   event.respondWith((async () => {
     const cache = await caches.open(cacheName);

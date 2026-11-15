@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import PixelIcon from "../../components/pixel-icon";
+import type { Scene } from "../../lib/api/world";
 import { landingSpot } from "./field-layout";
 
 const touchdown = 2.25;
@@ -10,20 +11,22 @@ const dust = Array.from({ length: 18 }, (_, index) => ({
   size: 3 + (index * 7) % 9,
 }));
 
-export default function RocketLanding({ planet, reducedMotion, onFinish }: {
-  planet: string; reducedMotion: boolean | null; onFinish: () => void;
+export default function RocketLanding({ planet, mission, reducedMotion, onFinish }: {
+  planet: string; mission?: Scene["mission"]; reducedMotion: boolean | null; onFinish: () => void;
 }) {
   const [landed, setLanded] = useState(false);
-  const onGround = reducedMotion || landed;
+  const [skipped, setSkipped] = useState(false);
+  const staticLanding = reducedMotion || skipped;
+  const onGround = staticLanding || landed;
 
   return (
     <section className="landing-cutscene" aria-label={`Rocket landing on ${planet}`}>
       <motion.div className="landing-vignette" aria-hidden="true" initial={{ opacity: 1 }}
         animate={reducedMotion ? { opacity: 1 } : { opacity: [1, 1, 0] }}
         transition={{ duration: reducedMotion ? 0 : 3.75, times: [0, .84, 1] }}
-        onAnimationComplete={reducedMotion ? undefined : onFinish} />
+        onAnimationComplete={reducedMotion || mission ? undefined : onFinish} />
       <div className="landing-spot" aria-hidden="true" style={{ left: `${landingSpot.x}%`, top: `${landingSpot.y}%` }}>
-        {!reducedMotion && <>
+        {!staticLanding && <>
           <motion.span className="landing-shadow" initial={{ scale: .3, opacity: .1 }}
             animate={{ scale: 1, opacity: .8 }} transition={{ duration: touchdown }} />
           <motion.span className="landing-shockwave" initial={{ opacity: 0, scale: .35 }}
@@ -38,15 +41,15 @@ export default function RocketLanding({ planet, reducedMotion, onFinish }: {
         </>}
         <motion.span className="landing-vehicle"
           initial={reducedMotion ? false : { x: "90vw", y: "-77dvh", rotate: -22 }}
-          animate={reducedMotion ? { x: 0, y: 0, rotate: 0 } : {
+          animate={staticLanding ? { x: "0vw", y: "0dvh", rotate: 0 } : {
             x: ["90vw", "16vw", "0vw", "0vw", "0vw"],
             y: ["-77dvh", "-29dvh", "-8dvh", "0dvh", "0dvh"],
             rotate: [-22, -12, 0, 0, 0],
           }}
-          transition={{ duration: reducedMotion ? 0 : touchdown, times: [0, .4, .7, .995, 1], ease: [.24, .63, .32, 1] }}
+          transition={{ duration: staticLanding ? 0 : touchdown, times: [0, .4, .7, .995, 1], ease: [.24, .63, .32, 1] }}
           onAnimationComplete={() => setLanded(true)}>
           <span className="survey-ship-sprite" />
-          {!reducedMotion && <motion.span className="landing-plume" initial={{ opacity: 1, scaleY: .55 }}
+          {!staticLanding && <motion.span className="landing-plume" initial={{ opacity: 1, scaleY: .55 }}
             animate={{ opacity: [1, 1, 1, 0], scaleY: [.55, 1.2, .85, .16] }}
             transition={{ duration: touchdown + .15, times: [0, .45, .88, 1] }} />}
         </motion.span>
@@ -54,9 +57,17 @@ export default function RocketLanding({ planet, reducedMotion, onFinish }: {
       <div className="landing-caption" role="status">
         <p className="field-label">{onGround ? "Touchdown confirmed" : "Survey ship on final approach"}</p>
         <h2>{planet}</h2>
+        {onGround && mission && (
+          <motion.div className="landing-briefing" initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }} transition={{ duration: reducedMotion ? 0 : .35 }}>
+            <p className="field-label">Incoming transmission · Language difficulty {mission.difficulty}/27</p>
+            <p>{mission.briefing}</p>
+          </motion.div>
+        )}
       </div>
-      <button type="button" className="game-button landing-skip" autoFocus onClick={onFinish}>
-        <PixelIcon name="right" /> {onGround ? "Explore" : "Skip landing"}
+      <button type="button" className="game-button landing-skip" autoFocus
+        onClick={!onGround && mission ? () => setSkipped(true) : onFinish}>
+        <PixelIcon name="right" /> {onGround ? "Explore" : mission ? "Skip to briefing" : "Skip landing"}
       </button>
     </section>
   );

@@ -19,6 +19,9 @@ export async function request<T>(
     signal: options.signal ? AbortSignal.any([options.signal, deadline]) : deadline,
   });
   if (!response.ok) {
+    if (path !== "auth/session" && (response.status === 401 || (response.status === 409 && headers.has("x-account-id")))) {
+      window.dispatchEvent(new Event("voices-session-changed"));
+    }
     const body = await response.json().catch(() => null);
     const reason = typeof body?.message === "string" ? body.message : null;
     throw new ApiError(response.status, reason ?? (response.status >= 500

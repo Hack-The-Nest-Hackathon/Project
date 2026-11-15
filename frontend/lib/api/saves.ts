@@ -1,19 +1,21 @@
 import { request } from "./client";
 import { isCharacter, type Character } from "../character";
+import { isNasaPhoto, type NasaPhoto } from "./photos";
 
-export type Progress = { planet: string; observed: string[]; badges: string[]; character?: Character };
+export type Progress = { planet: string; observed: string[]; badges: string[]; character?: Character; photos?: NasaPhoto[] };
 
 export function isProgress(value: unknown): value is Progress {
   if (!value || typeof value !== "object") return false;
-  const { planet, observed, badges, character } = value as Partial<Progress>;
+  const { planet, observed, badges, character, photos } = value as Partial<Progress>;
   const isStringArray = (items: unknown) => Array.isArray(items) && items.every((item) => typeof item === "string");
   return typeof planet === "string" && isStringArray(observed) && isStringArray(badges)
-    && (character === undefined || isCharacter(character));
+    && (character === undefined || isCharacter(character))
+    && (photos === undefined || (Array.isArray(photos) && photos.every(isNasaPhoto)));
 }
 
-export async function loadSaves(key: string, signal: AbortSignal) {
+export async function loadSaves(accountId: string, signal: AbortSignal) {
   const saves = await request<{ slot: number; progress: unknown }[]>("saves", {
-    headers: { "x-save-key": key }, timeout: 4_000, signal,
+    headers: { "x-account-id": accountId }, timeout: 4_000, signal,
   });
   const slots: Partial<Record<number, Progress>> = {};
   for (const { slot, progress } of saves) {
@@ -22,8 +24,8 @@ export async function loadSaves(key: string, signal: AbortSignal) {
   return slots;
 }
 
-export function saveProgress(key: string, slot: number, progress: Progress) {
+export function saveProgress(accountId: string, slot: number, progress: Progress, signal: AbortSignal) {
   return request<void>(`saves/${slot}`, {
-    method: "PUT", headers: { "x-save-key": key }, json: progress, timeout: 4_000,
+    method: "PUT", headers: { "x-account-id": accountId }, json: progress, timeout: 8_000, signal,
   });
 }

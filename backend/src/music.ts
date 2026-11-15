@@ -19,8 +19,8 @@ export function musicPrompt(id: string) {
   if (index < 0) throw new SpeechError(404, "Planet not found");
   const scene = world[index];
   const setting = id === "market" ? "a lively market" : id === "outpost" ? "a lantern-lit frontier outpost"
-    : scene.dialect === "Harbor speech" ? "a coastal resupply station"
-    : scene.dialect === "Highland speech" ? "a windy highland signal station" : "a remote desert survey camp";
+    : scene.region === "harbor" ? "a coastal resupply station"
+    : scene.region === "highland" ? "a windy highland signal station" : "a remote desert survey camp";
   return `Instrumental pixel-art exploration game soundtrack for ${scene.title}, ${setting}. Use ${motifs[index % motifs.length]} at ${76 + (index * 7) % 29} BPM. Keep dialogue intelligible with sparse arrangements and no vocals. Keep the opening and closing texture similar for looping.`;
 }
 
