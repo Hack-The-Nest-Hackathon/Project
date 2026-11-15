@@ -10,9 +10,10 @@ const transportHeaders = [
 
 async function proxy(request: Request) {
   const source = new URL(request.url);
+  const backendUrl = process.env.BACKEND_URL?.trim();
   let target: URL;
   try {
-    target = new URL(process.env.BACKEND_URL?.trim() || "http://127.0.0.1:3001");
+    target = new URL(backendUrl || "http://127.0.0.1:3001");
     if (!["http:", "https:"].includes(target.protocol) || target.username || target.password || target.search || target.hash) {
       throw new Error("Invalid backend URL");
     }
@@ -20,6 +21,7 @@ async function proxy(request: Request) {
     target.search = source.search;
     if (target.href === source.href) throw new Error("Backend URL points to this API proxy");
   } catch {
+    console.error("Invalid BACKEND_URL for the API proxy", { configured: Boolean(backendUrl) });
     return Response.json({ message: "The backend URL is misconfigured." }, { status: 500 });
   }
 
@@ -55,7 +57,14 @@ async function proxy(request: Request) {
     responseHeaders.delete("set-cookie");
     for (const cookie of response.headers.getSetCookie()) responseHeaders.append("set-cookie", cookie);
     return new Response(response.body, { status: response.status, headers: responseHeaders });
-  } catch {
+  } catch (error) {
+    const cause = error instanceof Error ? error.cause : undefined;
+    const code = cause && typeof cause === "object" && "code" in cause ? cause.code : undefined;
+    console.error("API proxy failed to reach the backend", {
+      backend: target.origin,
+      usingLocalDefault: !backendUrl,
+      reason: typeof code === "string" && /^[A-Z0-9_]+$/.test(code) ? code : error instanceof Error ? error.name : "Unknown",
+    });
     return Response.json({ message: "The game server is unavailable." }, { status: 502 });
   }
 }
